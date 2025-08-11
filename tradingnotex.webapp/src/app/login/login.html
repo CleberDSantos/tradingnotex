@@ -1,41 +1,74 @@
-<div class="login-container">
-  <h2>Login</h2>
-  <div *ngIf="error" class="error-message">
-    {{ error }}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <div class="text-center">
+      <h2 class="text-3xl font-extrabold text-good">TradingNoteX</h2>
+      <p class="mt-2 text-sm text-gray-400">Faça login em sua conta</p>
+    </div>
+    
+    <div class="card p-8">
+      <div *ngIf="error" class="mb-4 bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded">
+        {{ error }}
+      </div>
+      
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm" class="space-y-6">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-300">
+            Usuário
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            [(ngModel)]="loginData.username"
+            required
+            #username="ngModel"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="Digite seu usuário">
+          <div *ngIf="username.invalid && username.touched" class="mt-1 text-bad text-sm">
+            Nome de usuário é obrigatório
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300">
+            Senha
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            [(ngModel)]="loginData.password"
+            required
+            #password="ngModel"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="Digite sua senha">
+          <div *ngIf="password.invalid && password.touched" class="mt-1 text-bad text-sm">
+            Senha é obrigatória
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          [disabled]="!loginForm.form.valid || loading"
+          class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-good hover:bg-good/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-good disabled:opacity-50 disabled:cursor-not-allowed">
+          
+          <span *ngIf="loading" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Entrando...
+          </span>
+          <span *ngIf="!loading">Entrar</span>
+        </button>
+      </form>
+      
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-400">
+          Credenciais demo: <br>
+          <span class="font-mono text-cyanx">demo / demo123</span>
+        </p>
+      </div>
+    </div>
   </div>
-  <form (ngSubmit)="onLogin()" #loginForm="ngForm">
-    <div class="form-group">
-      <label for="username">Usuário:</label>
-      <input
-        type="text"
-        id="username"
-        name="username"
-        [(ngModel)]="loginData.username"
-        required
-        #username="ngModel"
-        class="form-control">
-      <div [hidden]="username.valid || username.pristine" class="error">
-        Nome de usuário é obrigatório
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="password">Senha:</label>
-      <input
-        type="password"
-        id="password"
-        name="password"
-        [(ngModel)]="loginData.password"
-        required
-        #password="ngModel"
-        class="form-control">
-      <div [hidden]="password.valid || password.pristine" class="error">
-        Senha é obrigatória
-      </div>
-    </div>
-
-    <button type="submit" [disabled]="!loginForm.form.valid" class="btn btn-primary">
-      Entrar
-    </button>
-  </form>
 </div>

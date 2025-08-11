@@ -10,14 +10,12 @@ import { NgIf, JsonPipe } from '@angular/common';
   styleUrl: './risk.scss'
 })
 export class Risk {
-  // Dados para avaliação de risco de dia
   dayRiskData = {
     day: '',
     goalEUR: 2.00,
     maxLossEUR: 2.00
   };
 
-  // Dados para avaliação de risco de range
   rangeRiskData = {
     start: '',
     end: '',
@@ -25,15 +23,30 @@ export class Risk {
     maxLossEUR: 2.00
   };
 
-  // Resultados
   dayRiskResult: any = null;
   rangeRiskResult: any = null;
   loading = false;
   error: string | null = null;
 
-  constructor(private riskService: RiskService) {}
+  constructor(private riskService: RiskService) {
+    // Definir data padrão como hoje
+    this.dayRiskData.day = new Date().toISOString().split('T')[0];
+    
+    // Definir range padrão como última semana
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    
+    this.rangeRiskData.end = endDate.toISOString().split('T')[0];
+    this.rangeRiskData.start = startDate.toISOString().split('T')[0];
+  }
 
   evaluateDayRisk() {
+    if (!this.dayRiskData.day) {
+      this.error = 'Por favor, selecione uma data';
+      return;
+    }
+
     this.loading = true;
     this.error = null;
     this.dayRiskResult = null;
@@ -56,6 +69,11 @@ export class Risk {
   }
 
   evaluateRangeRisk() {
+    if (!this.rangeRiskData.start || !this.rangeRiskData.end) {
+      this.error = 'Por favor, selecione as datas de início e fim';
+      return;
+    }
+
     this.loading = true;
     this.error = null;
     this.rangeRiskResult = null;
@@ -76,5 +94,16 @@ export class Risk {
         this.loading = false;
       }
     });
+  }
+
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('pt-PT', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(value);
+  }
+
+  formatDateTime(dateString: string): string {
+    return new Date(dateString).toLocaleString('pt-PT');
   }
 }

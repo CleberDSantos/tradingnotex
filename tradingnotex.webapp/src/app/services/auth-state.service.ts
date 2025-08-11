@@ -10,7 +10,7 @@ export class AuthStateService {
 
   constructor() {
     // Verificar se o usuário está autenticado ao inicializar o serviço
-    const token = localStorage.getItem('authToken');
+    const token = this.getStoredToken();
     if (token) {
       this.isAuthenticatedSubject.next(true);
     }
@@ -20,9 +20,9 @@ export class AuthStateService {
     this.isAuthenticatedSubject.next(isAuthenticated);
 
     if (isAuthenticated && token) {
-      localStorage.setItem('authToken', token);
+      this.storeToken(token);
     } else {
-      localStorage.removeItem('authToken');
+      this.removeToken();
     }
   }
 
@@ -31,6 +31,38 @@ export class AuthStateService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('authToken');
+    return this.getStoredToken();
+  }
+
+  private storeToken(token: string): void {
+    try {
+      localStorage.setItem('authToken', token);
+    } catch (error) {
+      console.warn('Could not store token in localStorage:', error);
+      // Fallback para sessionStorage se localStorage não estiver disponível
+      try {
+        sessionStorage.setItem('authToken', token);
+      } catch (sessionError) {
+        console.warn('Could not store token in sessionStorage:', sessionError);
+      }
+    }
+  }
+
+  private getStoredToken(): string | null {
+    try {
+      return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    } catch (error) {
+      console.warn('Could not retrieve token from storage:', error);
+      return null;
+    }
+  }
+
+  private removeToken(): void {
+    try {
+      localStorage.removeItem('authToken');
+      sessionStorage.removeItem('authToken');
+    } catch (error) {
+      console.warn('Could not remove token from storage:', error);
+    }
   }
 }

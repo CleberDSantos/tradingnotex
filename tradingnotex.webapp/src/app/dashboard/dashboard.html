@@ -1,62 +1,183 @@
-<div class="dashboard-container">
-  <h2>Dashboard</h2>
+<div class="max-w-7xl mx-auto p-4 space-y-6">
+  <!-- Header -->
+  <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
+    <div>
+      <h1 class="text-3xl font-black text-gray-100">📊 Dashboard de Trades <span class="text-gray-500 text-xl">— Unificado</span></h1>
+      <p class="text-sm text-gray-400 mt-1">Base SMC OTE — tudo em um lugar</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50">
+        📊 Atualizar
+      </button>
+    </div>
+  </header>
 
-  <!-- Loading indicator -->
-  <div *ngIf="loading" class="loading">Carregando...</div>
+  <!-- Loading Indicator -->
+  <div *ngIf="loading" class="flex justify-center items-center py-8">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyanx"></div>
+  </div>
 
-  <!-- KPIs Section -->
-  <section class="kpis-section">
-    <h3>KPIs</h3>
-    <div class="kpis-grid">
-      <div class="kpi-card">
-        <h4>Resultado Total</h4>
-        <p class="kpi-value">{{ kpis.totalPL || 0 | currency:'EUR' }}</p>
+  <!-- Error Message -->
+  <div *ngIf="error" class="bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded">
+    {{ error }}
+  </div>
+
+  <!-- Filtros e Agrupamento -->
+  <section class="card p-4 animate-slide-up" style="animation-delay: .05s">
+    <h2 class="text-lg font-semibold mb-3">🔍 Filtros e Agrupamento</h2>
+    <div class="grid md:grid-cols-5 gap-3">
+      <div>
+        <label class="text-xs muted block mb-1">Instrumento</label>
+        <input 
+          [(ngModel)]="filters.instrument"
+          type="text" 
+          placeholder="ex: TECH100" 
+          class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
-      <div class="kpi-card">
-        <h4>Win Rate</h4>
-        <p class="kpi-value">{{ kpis.winRate || 0 }}%</p>
+      <div>
+        <label class="text-xs muted block mb-1">Data Início</label>
+        <input 
+          [(ngModel)]="filters.startDate"
+          type="date" 
+          class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
-      <div class="kpi-card">
-        <h4>Expectancy</h4>
-        <p class="kpi-value">{{ kpis.expectancy || 0 | currency:'EUR' }}</p>
+      <div>
+        <label class="text-xs muted block mb-1">Data Fim</label>
+        <input 
+          [(ngModel)]="filters.endDate"
+          type="date" 
+          class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
-      <div class="kpi-card">
-        <h4>Maior Ganho</h4>
-        <p class="kpi-value">{{ kpis.maxGain || 0 | currency:'EUR' }}</p>
+      <div>
+        <label class="text-xs muted block mb-1">Agrupar por</label>
+        <select 
+          [(ngModel)]="filters.groupBy"
+          class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          <option value="instrument">Instrumento</option>
+          <option value="day">Dia</option>
+          <option value="week">Semana</option>
+          <option value="month">Mês</option>
+          <option value="hour">Hora</option>
+          <option value="side">Side</option>
+        </select>
       </div>
-      <div class="kpi-card">
-        <h4>Maior Perda</h4>
-        <p class="kpi-value">{{ kpis.maxLoss || 0 | currency:'EUR' }}</p>
-      </div>
-      <div class="kpi-card">
-        <h4>Drawdown</h4>
-        <p class="kpi-value">{{ kpis.drawdown || 0 | currency:'EUR' }}</p>
+      <div class="flex gap-2 items-end">
+        <button 
+          (click)="applyFilters()"
+          class="px-4 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">
+          ✅ Aplicar
+        </button>
+        <button 
+          (click)="clearFilters()"
+          class="px-4 py-2 rounded border border-edge hover:bg-card">
+          ❌ Limpar
+        </button>
       </div>
     </div>
   </section>
 
-  <!-- Trades Section -->
-  <section class="trades-section">
-    <h3>Últimos Trades</h3>
-    <table class="trades-table">
-      <thead>
+  <!-- KPIs Linha 1 -->
+  <section class="grid grid-cols-2 md:grid-cols-6 gap-4 animate-slide-up" style="animation-delay: .1s">
+    <div class="card kpi" [ngClass]="getKPIClass(kpis.totalPL, 'pl')">
+      <div class="text-2xl mb-2">💰</div>
+      <div class="text-xs muted">Resultado Total</div>
+      <div class="v" [ngClass]="getKPIClass(kpis.totalPL, 'pl')">{{ formatCurrency(kpis.totalPL) }}</div>
+    </div>
+    
+    <div class="card kpi text-cyanx">
+      <div class="text-2xl mb-2">📊</div>
+      <div class="text-xs muted">Win Rate</div>
+      <div class="v text-cyanx">{{ formatPercentage(kpis.winRate) }}</div>
+    </div>
+    
+    <div class="card kpi text-accent">
+      <div class="text-2xl mb-2">📈</div>
+      <div class="text-xs muted">Expectancy</div>
+      <div class="v text-accent">{{ formatCurrency(kpis.expectancy) }}</div>
+    </div>
+    
+    <div class="card kpi text-good">
+      <div class="text-2xl mb-2">🚀</div>
+      <div class="text-xs muted">Maior Ganho</div>
+      <div class="v text-good">{{ formatCurrency(kpis.maxGain) }}</div>
+    </div>
+    
+    <div class="card kpi text-bad">
+      <div class="text-2xl mb-2">⚠️</div>
+      <div class="text-xs muted">Maior Perda</div>
+      <div class="v text-bad">{{ formatCurrency(kpis.maxLoss) }}</div>
+    </div>
+    
+    <div class="card kpi text-accent">
+      <div class="text-2xl mb-2">📉</div>
+      <div class="text-xs muted">Drawdown</div>
+      <div class="v text-accent">{{ formatCurrency(kpis.drawdown) }}</div>
+    </div>
+  </section>
+
+  <!-- Insights -->
+  <section class="card p-4 animate-slide-up" style="animation-delay: .15s">
+    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Insights em linguagem simples</h2>
+    <div class="space-y-2 text-gray-200">
+      <div *ngFor="let insight of insights" class="p-2 rounded hover:bg-edge/50">
+        • {{ insight }}
+      </div>
+      <div *ngIf="insights.length === 0" class="text-gray-400 text-center py-4">
+        📊 Carregando insights...
+      </div>
+    </div>
+  </section>
+
+  <!-- Heatmap -->
+  <section class="card p-4 animate-slide-up" style="animation-delay: .18s" *ngIf="heatmapData">
+    <h2 class="text-lg font-semibold mb-3">⏱️ Heatmap — Hora x Dia (P/L)</h2>
+    <div class="text-sm text-gray-400 mb-2">
+      Melhor horário: {{ heatmapData.bestHour.hour }}h ({{ formatCurrency(heatmapData.bestHour.pl) }}) •
+      Pior horário: {{ heatmapData.worstHour.hour }}h ({{ formatCurrency(heatmapData.worstHour.pl) }})
+    </div>
+    <div class="grid grid-cols-24 gap-1">
+      <div *ngFor="let hour of heatmapData.heatmap" 
+           class="h-8 rounded text-xs flex items-center justify-center"
+           [style.background-color]="hour.pl >= 0 ? 'rgba(16, 185, 129, ' + Math.min(Math.abs(hour.pl) / 10, 1) + ')' : 'rgba(239, 68, 68, ' + Math.min(Math.abs(hour.pl) / 10, 1) + ')'"
+           [title]="hour.hour + 'h: ' + formatCurrency(hour.pl)">
+        {{ hour.hour }}
+      </div>
+    </div>
+  </section>
+
+  <!-- Trades Table -->
+  <section class="card p-4 overflow-x-auto animate-slide-up">
+    <h2 class="text-xl font-semibold mb-3">📄 Últimos Trades</h2>
+    <table class="w-full text-sm tbl">
+      <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
         <tr>
-          <th>Data/Hora</th>
-          <th>Instrumento</th>
-          <th>Side</th>
-          <th>P/L (€)</th>
-          <th>Setup</th>
+          <th class="text-left">Data/Hora</th>
+          <th class="text-left">Instrumento</th>
+          <th class="text-left">Side</th>
+          <th class="text-right">P/L (€)</th>
+          <th class="text-left">Setup</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let trade of trades">
+        <tr *ngFor="let trade of trades" class="hover:bg-edge/20">
           <td>{{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}</td>
-          <td>{{ trade.instrument }}</td>
-          <td>{{ trade.side }}</td>
-          <td [ngClass]="{'profit': trade.realizedPLEUR > 0, 'loss': trade.realizedPLEUR < 0}">
-            {{ trade.realizedPLEUR | currency:'EUR' }}
+          <td class="font-semibold">{{ trade.instrument }}</td>
+          <td>
+            <span class="chip" 
+                  [ngClass]="trade.side === 'buy' ? 'bg-good/20' : 'bg-bad/20'">
+              {{ trade.side === 'buy' ? '📈' : '📉' }} {{ trade.side }}
+            </span>
+          </td>
+          <td class="text-right font-bold" 
+              [ngClass]="getTradeProfitClass(trade.realizedPLEUR || 0)">
+            {{ formatCurrency(trade.realizedPLEUR || 0) }}
           </td>
           <td>{{ trade.setup }}</td>
+        </tr>
+        <tr *ngIf="trades.length === 0">
+          <td colspan="5" class="text-center py-8 text-gray-400">
+            📭 Nenhum trade encontrado
+          </td>
         </tr>
       </tbody>
     </table>

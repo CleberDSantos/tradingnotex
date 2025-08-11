@@ -13,6 +13,7 @@ import { NgIf } from '@angular/common';
 export class Login {
   loginData: LoginRequest = {};
   error: string | null = null;
+  loading = false;
 
   constructor(
     private authService: AuthService,
@@ -20,16 +21,23 @@ export class Login {
   ) {}
 
   onLogin() {
+    if (!this.loginData.username || !this.loginData.password) {
+      this.error = 'Por favor, preencha todos os campos';
+      return;
+    }
+
     this.error = null;
+    this.loading = true;
+    
     this.authService.login(this.loginData).subscribe({
       next: (response) => {
         console.log('Login successful', response);
-        // Redirecionar para o dashboard após login bem-sucedido
         this.router.navigate(['/dashboard']);
       },
       error: (error) => {
         console.error('Login failed', error);
         this.error = 'Falha no login. Verifique suas credenciais.';
+        this.loading = false;
       }
     });
   }

@@ -1,16 +1,34 @@
-<nav class="navigation">
-  <ul class="nav-list">
-    <li class="nav-item">
-      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
-    </li>
-    <li class="nav-item">
-      <a routerLink="/partials" routerLinkActive="active" class="nav-link">Parciais</a>
-    </li>
-    <li class="nav-item">
-      <a routerLink="/risk" routerLinkActive="active" class="nav-link">Risco</a>
-    </li>
-    <li class="nav-item">
-      <a routerLink="/logout" class="nav-link">Logout</a>
-    </li>
-  </ul>
+<nav class="navigation bg-gradient-to-r from-card to-edge border-b border-edge">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <div class="text-xl font-bold text-good">TradingNoteX</div>
+        
+        <div class="flex space-x-4">
+          <a routerLink="/dashboard" 
+             routerLinkActive="active" 
+             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+            📊 Dashboard
+          </a>
+          <a routerLink="/partials" 
+             routerLinkActive="active" 
+             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+            📊 Parciais
+          </a>
+          <a routerLink="/risk" 
+             routerLinkActive="active" 
+             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+            🛡️ Risco
+          </a>
+        </div>
+      </div>
+      
+      <div class="flex items-center">
+        <a routerLink="/logout" 
+           class="nav-link px-3 py-2 rounded-md text-sm font-medium text-bad hover:bg-bad/20">
+          🚪 Logout
+        </a>
+      </div>
+    </div>
+  </div>
 </nav>

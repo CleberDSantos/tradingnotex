@@ -24,9 +24,22 @@ export interface Trade {
   dailyLossReached?: boolean;
 }
 
-/**
- * TradeService - comunicação com /api/classes/Trade
- */
+export interface KPIsResponse {
+  totalPL: number;
+  winRate: number;
+  expectancy: number;
+  maxGain: number;
+  maxLoss: number;
+  drawdown: number;
+  totalTrades: number;
+}
+
+export interface HourlyHeatmapResponse {
+  heatmap: Array<{hour: number, pl: number, trades: number}>;
+  bestHour: {hour: number, pl: number};
+  worstHour: {hour: number, pl: number};
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -35,15 +48,28 @@ export class TradeService {
 
   constructor(private http: HttpClient) {}
 
-  list(params?: { Instrument?: string; StartDate?: string; EndDate?: string; OrderBy?: string; Limit?: number; Skip?: number }): Observable<any> {
+  list(params?: { 
+    Instrument?: string; 
+    StartDate?: Date; 
+    EndDate?: Date; 
+    OrderBy?: string; 
+    Limit?: number; 
+    Skip?: number 
+  }): Observable<{results: Trade[]}> {
     let httpParams = new HttpParams();
     if (params) {
       Object.keys(params).forEach(key => {
         const v: any = (params as any)[key];
-        if (v !== undefined && v !== null) httpParams = httpParams.set(key, String(v));
+        if (v !== undefined && v !== null) {
+          if (v instanceof Date) {
+            httpParams = httpParams.set(key, v.toISOString());
+          } else {
+            httpParams = httpParams.set(key, String(v));
+          }
+        }
       });
     }
-    return this.http.get(this.base, { params: httpParams });
+    return this.http.get<{results: Trade[]}>(this.base, { params: httpParams });
   }
 
   get(objectId: string): Observable<Trade> {
@@ -62,12 +88,22 @@ export class TradeService {
     return this.http.delete(`${this.base}/${encodeURIComponent(objectId)}`);
   }
 
-  // Details endpoint
-  updateDetails(objectId: string, payload: Partial<Trade>): Observable<any> {
-    return this.http.put(`${this.base}/${encodeURIComponent(objectId)}/details`, payload);
+  getKPIs(startDate?: string, endDate?: string): Observable<KPIsResponse> {
+    let params = new HttpParams();
+    if (startDate) params = params.set('startDate', startDate);
+    if (endDate) params = params.set('endDate', endDate);
+    return this.http.get<KPIsResponse>(`${this.base}/kpis`, { params });
   }
 
-  // Comments
+  getHeatmap(): Observable<HourlyHeatmapResponse> {
+    return this.http.get<HourlyHeatmapResponse>(`${this.base}/heatmap`);
+  }
+
+  getInsights(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.base}/insights`);
+  }
+
+  // Métodos para comentários
   listComments(objectId: string): Observable<any> {
     return this.http.get(`${this.base}/${encodeURIComponent(objectId)}/comments`);
   }
@@ -80,19 +116,8 @@ export class TradeService {
     return this.http.post(`${this.base}/${encodeURIComponent(objectId)}/comments/${encodeURIComponent(commentId)}/analyze`, {});
   }
 
-  // KPIs / heatmap / insights
-  getKPIs(startDate?: string, endDate?: string): Observable<any> {
-    let params = new HttpParams();
-    if (startDate) params = params.set('startDate', startDate);
-    if (endDate) params = params.set('endDate', endDate);
-    return this.http.get(`${this.base}/kpis`, { params });
-  }
-
-  getHeatmap(): Observable<any> {
-    return this.http.get(`${this.base}/heatmap`);
-  }
-
-  getInsights(): Observable<any> {
-    return this.http.get(`${this.base}/insights`);
+  // Método para atualizar detalhes do trade
+  updateDetails(objectId: string, payload: Partial<Trade>): Observable<any> {
+    return this.http.put(`${this.base}/${encodeURIComponent(objectId)}/details`, payload);
   }
 }

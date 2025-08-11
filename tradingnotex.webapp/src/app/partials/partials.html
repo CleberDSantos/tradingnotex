@@ -1,218 +1,243 @@
-<div class="partials-container">
-  <h2>Plano de Parciais</h2>
+<div class="max-w-7xl mx-auto p-4 space-y-6">
+  <header class="mb-6">
+    <h1 class="text-3xl font-black text-gray-100">📊 Plano de Parciais</h1>
+    <p class="text-sm text-gray-400 mt-1">Otimização e geração de planos de parciais para MNQ</p>
+  </header>
 
-  <!-- Mensagem de erro -->
-  <div *ngIf="error" class="error-message">
+  <!-- Loading Indicator -->
+  <div *ngIf="loading" class="flex justify-center items-center py-8">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyanx"></div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded mb-4">
     {{ error }}
   </div>
 
-  <!-- Indicador de carregamento -->
-  <div *ngIf="loading" class="loading">Processando...</div>
-
   <!-- Seção para gerar plano de parciais -->
-  <section class="form-section">
-    <h3>Gerar Plano de Parciais</h3>
-    <form (ngSubmit)="generatePartialPlan()" #planForm="ngForm">
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="stopPts">Stop (pontos):</label>
-          <input
-            type="number"
-            id="stopPts"
-            name="stopPts"
-            [(ngModel)]="partialPlanData.stopPts"
-            step="0.25"
-            required
-            class="form-control">
+  <section class="card p-6">
+    <h3 class="text-xl font-semibold mb-4 text-good">🎯 Gerar Plano de Parciais</h3>
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Configurações do Trade -->
+      <div class="space-y-4">
+        <h4 class="font-medium text-gray-300">Configurações do Trade</h4>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Stop (pontos):</label>
+          <input type="number" [(ngModel)]="partialPlanData.stopPts" step="0.25" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
         </div>
 
-        <div class="form-group">
-          <label for="contracts"># Contratos:</label>
-          <input
-            type="number"
-            id="contracts"
-            name="contracts"
-            [(ngModel)]="partialPlanData.contracts"
-            min="1"
-            max="10"
-            required
-            class="form-control">
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1"># Contratos:</label>
+          <input type="number" [(ngModel)]="partialPlanData.contracts" min="1" max="10" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
         </div>
 
-        <div class="form-group">
-          <label for="direction">Direção:</label>
-          <select
-            id="direction"
-            name="direction"
-            [(ngModel)]="partialPlanData.direction"
-            class="form-control">
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Direção:</label>
+          <select [(ngModel)]="partialPlanData.direction" 
+                  class="w-full bg-blacker border border-edge rounded px-3 py-2">
             <option value="long">Long</option>
             <option value="short">Short</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label for="entry">Preço de Entrada:</label>
-          <input
-            type="number"
-            id="entry"
-            name="entry"
-            [(ngModel)]="partialPlanData.entry"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="r1">R1:</label>
-          <input
-            type="number"
-            id="r1"
-            name="r1"
-            [(ngModel)]="partialPlanData.r1"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="r2">R2:</label>
-          <input
-            type="number"
-            id="r2"
-            name="r2"
-            [(ngModel)]="partialPlanData.r2"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="r3">R3:</label>
-          <input
-            type="number"
-            id="r3"
-            name="r3"
-            [(ngModel)]="partialPlanData.r3"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="p1">P1 (%):</label>
-          <input
-            type="number"
-            id="p1"
-            name="p1"
-            [(ngModel)]="partialPlanData.p1"
-            min="0"
-            max="100"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="p2">P2 (%):</label>
-          <input
-            type="number"
-            id="p2"
-            name="p2"
-            [(ngModel)]="partialPlanData.p2"
-            min="0"
-            max="100"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="p3">P3 (%):</label>
-          <input
-            type="number"
-            id="p3"
-            name="p3"
-            [(ngModel)]="partialPlanData.p3"
-            min="0"
-            max="100"
-            required
-            class="form-control">
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Preço de Entrada:</label>
+          <input type="number" [(ngModel)]="partialPlanData.entry" step="0.25" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary">
-        Gerar Plano
-      </button>
-    </form>
+      <!-- Níveis R -->
+      <div class="space-y-4">
+        <h4 class="font-medium text-gray-300">Níveis R</h4>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">R1:</label>
+          <input type="number" [(ngModel)]="partialPlanData.r1" step="0.25" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">R2:</label>
+          <input type="number" [(ngModel)]="partialPlanData.r2" step="0.25" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">R3:</label>
+          <input type="number" [(ngModel)]="partialPlanData.r3" step="0.25" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+      </div>
+
+      <!-- Percentuais -->
+      <div class="space-y-4">
+        <h4 class="font-medium text-gray-300">Distribuição (%)</h4>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">P1 (%):</label>
+          <input type="number" [(ngModel)]="partialPlanData.p1" min="0" max="100" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">P2 (%):</label>
+          <input type="number" [(ngModel)]="partialPlanData.p2" min="0" max="100" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-1">P3 (%):</label>
+          <input type="number" [(ngModel)]="partialPlanData.p3" min="0" max="100" 
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        </div>
+
+        <button (click)="generatePartialPlan()" [disabled]="loading"
+                class="w-full btn btn-primary mt-4">
+          🎯 Gerar Plano
+        </button>
+      </div>
+    </div>
   </section>
 
   <!-- Resultado do plano de parciais -->
-  <section *ngIf="planResult" class="result-section">
-    <h3>Plano de Parciais Gerado</h3>
-    <pre>{{ planResult | json }}</pre>
+  <section *ngIf="planResult" class="card p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-semibold text-good">📋 Plano de Parciais Gerado</h3>
+      <button (click)="exportPlan()" class="btn btn-secondary">
+        💾 Exportar
+      </button>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-edge">
+          <tr class="text-gray-400">
+            <th class="text-left py-2">Etapa</th>
+            <th class="text-right py-2">R (x)</th>
+            <th class="text-right py-2">Pontos</th>
+            <th class="text-right py-2">Preço</th>
+            <th class="text-right py-2">Contratos</th>
+            <th class="text-right py-2">PnL Parcial</th>
+            <th class="text-right py-2">PnL Acumulado</th>
+            <th class="text-left py-2">Ação de Stop</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of planResult.rows" class="border-b border-edge/40">
+            <td class="py-2">{{ row.label }}</td>
+            <td class="text-right">{{ row.r }}</td>
+            <td class="text-right">{{ row.points }}</td>
+            <td class="text-right">{{ row.price }}</td>
+            <td class="text-right">{{ row.lots }}</td>
+            <td class="text-right" [ngClass]="row.pnL >= 0 ? 'text-good' : 'text-bad'">${{ row.pnL }}</td>
+            <td class="text-right" [ngClass]="row.pnLAccum >= 0 ? 'text-good' : 'text-bad'">${{ row.pnLAccum }}</td>
+            <td class="text-left text-gray-300">{{ row.stopAction }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mt-6">
+      <div class="bg-edge/50 rounded p-4">
+        <div class="text-xs text-gray-400">PnL do Plano</div>
+        <div class="text-lg font-bold text-good">${{ planResult.planPnL }}</div>
+      </div>
+      <div class="bg-edge/50 rounded p-4">
+        <div class="text-xs text-gray-400">PnL Full Hold</div>
+        <div class="text-lg font-bold">${{ planResult.fullHoldPnL }}</div>
+      </div>
+      <div class="bg-edge/50 rounded p-4" *ngIf="planResult.hint">
+        <div class="text-xs text-gray-400">Dica</div>
+        <div class="text-sm text-accent">{{ planResult.hint }}</div>
+      </div>
+    </div>
   </section>
 
   <!-- Seção para otimizar parciais -->
-  <section class="form-section">
-    <h3>Otimizar Parciais</h3>
-    <form (ngSubmit)="optimizePartials()" #optimizeForm="ngForm">
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="optStopPts">Stop (pontos):</label>
-          <input
-            type="number"
-            id="optStopPts"
-            name="optStopPts"
-            [(ngModel)]="optimizeData.stopPts"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="optContracts"># Contratos:</label>
-          <input
-            type="number"
-            id="optContracts"
-            name="optContracts"
-            [(ngModel)]="optimizeData.contracts"
-            min="1"
-            max="10"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="targetR">Alvo R:</label>
-          <input
-            type="number"
-            id="targetR"
-            name="targetR"
-            [(ngModel)]="optimizeData.targetR"
-            step="0.25"
-            required
-            class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label for="curvePreset">Preset de Curva:</label>
-          <input
-            type="text"
-            id="curvePreset"
-            name="curvePreset"
-            [(ngModel)]="optimizeData.curvePreset"
-            class="form-control">
-        </div>
+  <section class="card p-6">
+    <h3 class="text-xl font-semibold mb-4 text-accent">🎲 Otimizar Parciais</h3>
+    <div class="grid md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1">Stop (pontos):</label>
+        <input type="number" [(ngModel)]="optimizeData.stopPts" step="0.25" 
+               class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
 
-      <button type="submit" class="btn btn-primary">
-        Otimizar
-      </button>
-    </form>
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1"># Contratos:</label>
+        <input type="number" [(ngModel)]="optimizeData.contracts" min="1" max="10" 
+               class="w-full bg-blacker border border-edge rounded px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1">Alvo R:</label>
+        <input type="number" [(ngModel)]="optimizeData.targetR" step="0.25" 
+               class="w-full bg-blacker border border-edge rounded px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1">Preset de Curva:</label>
+        <select [(ngModel)]="optimizeData.curvePreset" 
+                class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          <option value="conservative">Conservador</option>
+          <option value="neutral">Neutro</option>
+          <option value="aggressive">Agressivo</option>
+        </select>
+      </div>
+    </div>
+
+    <button (click)="optimizePartials()" [disabled]="loading"
+            class="btn btn-primary mt-4">
+      🎲 Otimizar
+    </button>
   </section>
 
   <!-- Resultado da otimização -->
-  <section *ngIf="optimizeResult" class="result-section">
-    <h3>Resultado da Otimização</h3>
-    <pre>{{ optimizeResult | json }}</pre>
+  <section *ngIf="optimizeResult" class="card p-6">
+    <h3 class="text-xl font-semibold mb-4 text-accent">🎯 Resultado da Otimização</h3>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <h4 class="font-medium text-gray-300 mb-3">Configurações Otimizadas</h4>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-400">R1:</span>
+            <span class="font-medium">{{ optimizeResult.r1 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">R2:</span>
+            <span class="font-medium">{{ optimizeResult.r2 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">R3:</span>
+            <span class="font-medium">{{ optimizeResult.r3 }}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h4 class="font-medium text-gray-300 mb-3">Distribuição Otimizada</h4>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-400">P1:</span>
+            <span class="font-medium">{{ optimizeResult.p1 }}%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">P2:</span>
+            <span class="font-medium">{{ optimizeResult.p2 }}%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">P3:</span>
+            <span class="font-medium">{{ optimizeResult.p3 }}%</span>
+          </div>
+          <div class="flex justify-between pt-2 border-t border-edge">
+            <span class="text-gray-400">EV Esperado:</span>
+            <span class="font-bold text-good">${{ optimizeResult.ev }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </div>

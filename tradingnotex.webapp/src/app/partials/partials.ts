@@ -1,16 +1,15 @@
 import { Component } from '@angular/core';
 import { PartialsService, PartialPlanRequest } from '../services/partials.service';
 import { FormsModule } from '@angular/forms';
-import { NgIf, JsonPipe } from '@angular/common';
+import { NgIf, JsonPipe, NgFor } from '@angular/common';
 
 @Component({
   selector: 'app-partials',
-  imports: [FormsModule, NgIf, JsonPipe],
+  imports: [FormsModule, NgIf, JsonPipe, NgFor],
   templateUrl: './partials.html',
   styleUrl: './partials.scss'
 })
 export class Partials {
-  // Dados para geração do plano de parciais
   partialPlanData: PartialPlanRequest = {
     stopPts: 12,
     contracts: 2,
@@ -25,15 +24,13 @@ export class Partials {
     usdPerPointPerContract: 2.0
   };
 
-  // Dados para otimização de parciais
   optimizeData = {
     stopPts: 12,
     contracts: 2,
     targetR: 2.0,
-    curvePreset: ''
+    curvePreset: 'neutral'
   };
 
-  // Resultados
   planResult: any = null;
   optimizeResult: any = null;
   loading = false;
@@ -75,5 +72,19 @@ export class Partials {
         this.loading = false;
       }
     });
+  }
+
+  exportPlan() {
+    if (!this.planResult) return;
+    
+    const blob = new Blob([JSON.stringify(this.planResult, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plano_parciais_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }
