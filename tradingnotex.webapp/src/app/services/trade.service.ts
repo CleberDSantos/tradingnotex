@@ -40,6 +40,15 @@ export interface HourlyHeatmapResponse {
   worstHour: {hour: number, pl: number};
 }
 
+export interface Comment {
+  id: string;
+  author?: string;
+  text?: string;
+  screenshot?: string;
+  createdAt?: string;
+  aiAnalysis?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -48,13 +57,13 @@ export class TradeService {
 
   constructor(private http: HttpClient) {}
 
-  list(params?: { 
-    Instrument?: string; 
-    StartDate?: Date; 
-    EndDate?: Date; 
-    OrderBy?: string; 
-    Limit?: number; 
-    Skip?: number 
+  list(params?: {
+    Instrument?: string;
+    StartDate?: Date;
+    EndDate?: Date;
+    OrderBy?: string;
+    Limit?: number;
+    Skip?: number
   }): Observable<{results: Trade[]}> {
     let httpParams = new HttpParams();
     if (params) {

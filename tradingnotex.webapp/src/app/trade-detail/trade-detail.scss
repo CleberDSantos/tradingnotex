@@ -1,0 +1,110 @@
+.emotion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+  animation: bounce-soft 2s infinite;
+}
+
+.comment-bubble {
+  background: #1b2330;
+  border-radius: 18px;
+  padding: 12px 16px;
+  position: relative;
+  max-width: 80%;
+
+  &.ai {
+    background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+    margin-left: auto;
+  }
+}
+
+.toggle-switch {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  background: #1b2330;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+
+  &.active {
+    background: #10b981;
+
+    .toggle-thumb {
+      transform: translateX(30px);
+    }
+  }
+}
+
+.toggle-thumb {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.slider-track {
+  background: linear-gradient(90deg, #ef4444 0%, #1b2330 50%, #10b981 100%);
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background: #9ca3af;
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.screenshot-preview {
+  border: 2px dashed #1b2330;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+
+  &:hover {
+    border-color: #22d3ee;
+  }
+}
