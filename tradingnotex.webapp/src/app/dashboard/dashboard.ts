@@ -1,9 +1,12 @@
 import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { TradeService } from '../services/trade.service';
-import { NgIf, NgFor, CurrencyPipe, DatePipe, NgClass, CommonModule } from '@angular/common';
+import { NgIf, NgFor, CurrencyPipe, DatePipe, DecimalPipe, NgClass, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { Router } from '@angular/router';
+import { RiskComponent } from '../risk/risk';
+import { EvolutionComponent } from '../evolution/evolution';
+import { AchievementsComponent } from '../achievements/achievements';
 
 declare var echarts: any;
 
@@ -14,11 +17,15 @@ interface Alert {
   msg: string;
 }
 
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+
 @Component({
   selector: 'app-dashboard',
-  imports: [NgIf, NgFor, CurrencyPipe, DatePipe, NgClass, CommonModule, FormsModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, NgIf, NgFor, CurrencyPipe, DatePipe, DecimalPipe, NgClass, RiskComponent, EvolutionComponent, AchievementsComponent],
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.scss'
+  styleUrl: './dashboard.scss',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
@@ -157,7 +164,8 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
 
   loadTrades() {
     const filter = {
-      Instrument: this.filters.instrument || undefined,
+      // Evita erro 400: campo Instrument obrigatório na API
+      Instrument: this.filters.instrument && this.filters.instrument.trim() !== '' ? this.filters.instrument : 'ALL',
       StartDate: this.filters.startDate ? new Date(this.filters.startDate) : undefined,
       EndDate: this.filters.endDate ? new Date(this.filters.endDate) : undefined,
       OrderBy: '-executedAtUTC',
@@ -262,18 +270,22 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     this.loadDashboardData();
   }
 
-  // Import JSON
+  // Import JSON com salvamento local (IndexedDB-like via localStorage)
   handleFileInput(event: any) {
     const file = event.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e: any) => {
       try {
         const json = JSON.parse(e.target.result);
-        // Chamar API para importar trades
-        console.log('Importando trades:', json);
-        // TODO: Implementar chamada para API de importação
+        if (Array.isArray(json.trades)) {
+          this.trades = json.trades;
+          localStorage.setItem('importedTrades', JSON.stringify(this.trades));
+          this.updatePivotData();
+          this.updateCharts();
+        } else {
+          throw new Error('Formato inválido');
+        }
       } catch {
         this.error = 'JSON inválido';
       }
@@ -282,8 +294,24 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadDemo() {
-    // TODO: Carregar dados demo
-    console.log('Carregando demo...');
+    const demo = {
+      trades: [
+        { executedAtUTC: '2025-08-07T13:46:41Z', instrument: 'TECH100', side: 'sell', realizedPLEUR: 4.84, setup: 'SMC' },
+        { executedAtUTC: '2025-08-07T13:56:21Z', instrument: 'TECH100', side: 'buy', realizedPLEUR: -1.61, setup: 'SMC' },
+        { executedAtUTC: '2025-08-07T14:24:58Z', instrument: 'TECH100', side: 'sell', realizedPLEUR: -3.15, setup: 'SMC' },
+        { executedAtUTC: '2025-08-07T16:40:59Z', instrument: 'TECH100', side: 'buy', realizedPLEUR: 5.41, setup: 'SMC' },
+        { executedAtUTC: '2025-08-07T17:37:35Z', instrument: 'TECH100', side: 'sell', realizedPLEUR: -2.73, setup: 'SMC' },
+        { executedAtUTC: '2025-08-08T10:02:06Z', instrument: 'TECH100', side: 'buy', realizedPLEUR: -0.37, setup: 'SMC' },
+        { executedAtUTC: '2025-08-08T10:53:47Z', instrument: 'TECH100', side: 'sell', realizedPLEUR: 0.92, setup: 'SMC' },
+        { executedAtUTC: '2025-08-08T12:50:07Z', instrument: 'TECH100', side: 'buy', realizedPLEUR: 1.17, setup: 'SMC' },
+        { executedAtUTC: '2025-08-09T09:15:00Z', instrument: 'SPX500', side: 'buy', realizedPLEUR: 3.25, setup: 'SMC' },
+        { executedAtUTC: '2025-08-09T11:30:00Z', instrument: 'SPX500', side: 'sell', realizedPLEUR: -1.85, setup: 'SMC' }
+      ]
+    };
+    this.trades = demo.trades;
+    localStorage.setItem('importedTrades', JSON.stringify(this.trades));
+    this.updatePivotData();
+    this.updateCharts();
   }
 
   // Navegação para detalhes do trade

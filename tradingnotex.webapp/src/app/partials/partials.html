@@ -1,12 +1,57 @@
-<div class="max-w-7xl mx-auto p-4 space-y-6">
-  <header class="mb-6">
-    <h1 class="text-3xl font-black text-gray-100">📊 Plano de Parciais</h1>
-    <p class="text-sm text-gray-400 mt-1">Otimização e geração de planos de parciais para MNQ</p>
-  </header>
+<section class="grid md:grid-cols-4 gap-6">
+  <div class="card p-4">
+    <h3 class="font-semibold mb-3">🎯 Objetivo & Contratos</h3>
+    <label class="text-xs text-gray-400">Meta (cash)</label>
+    <select [(ngModel)]="partialPlanData.targetCash" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+      <option value="180">Meta 1 — $180</option>
+      <option value="240">Meta 2 — $240</option>
+      <option value="300">Meta 3 — $300</option>
+      <option value="360">Fora da curva — $360</option>
+    </select>
+    <label class="text-xs text-gray-400 block mt-3"># Contratos (MNQ)</label>
+    <input [(ngModel)]="partialPlanData.contracts" type="number" min="1" max="10" value="2" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+    <p class="text-xs text-gray-500 mt-2">Referência planilha (2,3,5,8,10).</p>
+  </div>
+  <div class="card p-4">
+    <h3 class="font-semibold mb-3">🛑 Stop & Direção</h3>
+    <label class="text-xs text-gray-400">Stop por trade (pontos)</label>
+    <input [(ngModel)]="partialPlanData.stopPts" type="number" step="0.25" value="12" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+    <label class="text-xs text-gray-400 block mt-3">Direção</label>
+    <select [(ngModel)]="partialPlanData.direction" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+      <option value="long">Long</option>
+      <option value="short">Short</option>
+    </select>
+    <label class="text-xs text-gray-400 block mt-3">Preço de Entrada</label>
+    <input [(ngModel)]="partialPlanData.entry" type="number" step="0.25" value="20000" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+  </div>
+  <div class="card p-4">
+    <h3 class="font-semibold mb-3">⚙️ Parciais</h3>
+    <label class="text-xs text-gray-400">Distribuição dos contratos</label>
+    <div class="grid grid-cols-3 gap-2 mt-1">
+      <input [(ngModel)]="partialPlanData.p1" type="number" min="0" max="100" value="50" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+      <input [(ngModel)]="partialPlanData.p2" type="number" min="0" max="100" value="30" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+      <input [(ngModel)]="partialPlanData.p3" type="number" min="0" max="100" value="20" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Soma = 100% (P1/P2/Final).</p>
+    <label class="text-xs text-gray-400 block mt-3">Níveis (em R)</label>
+    <div class="grid grid-cols-3 gap-2 mt-1">
+      <input [(ngModel)]="partialPlanData.r1" type="number" step="0.25" value="1.0" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+      <input [(ngModel)]="partialPlanData.r2" type="number" step="0.25" value="1.5" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+      <input [(ngModel)]="partialPlanData.r3" type="number" step="0.25" value="2.0" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]">
+    </div>
+  </div>
+  <div class="card p-4">
+    <h3 class="font-semibold mb-3">📏 Conversões (MNQ)</h3>
+    <div class="text-sm flex justify-between"><span>$ por ponto / contrato</span><strong id="usdPerPoint">${{ partialPlanData.usdPerPointPerContract || '2.00' }}</strong></div>
+    <div class="text-sm flex justify-between mt-1"><span>Stop em $</span><strong id="stopCash">${{ ((partialPlanData.stopPts || 12) * (partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2)).toFixed(2) }}</strong></div>
+    <div class="text-sm flex justify-between mt-1"><span>Risco do trade</span><strong id="tradeRisk">${{ ((partialPlanData.stopPts || 12) * (partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2)).toFixed(2) }}</strong></div>
+  </div>
+</section>
 
+<section class="card p-4 mt-4">
   <!-- Loading Indicator -->
-  <div *ngIf="loading" class="flex justify-center items-center py-8">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyanx"></div>
+  <div *ngIf="loading" class="flex justify-center items-center py-4">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyanx"></div>
   </div>
 
   <!-- Error Message -->
@@ -14,230 +59,86 @@
     {{ error }}
   </div>
 
-  <!-- Seção para gerar plano de parciais -->
-  <section class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-good">🎯 Gerar Plano de Parciais</h3>
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- Configurações do Trade -->
-      <div class="space-y-4">
-        <h4 class="font-medium text-gray-300">Configurações do Trade</h4>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Stop (pontos):</label>
-          <input type="number" [(ngModel)]="partialPlanData.stopPts" step="0.25" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1"># Contratos:</label>
-          <input type="number" [(ngModel)]="partialPlanData.contracts" min="1" max="10" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Direção:</label>
-          <select [(ngModel)]="partialPlanData.direction" 
-                  class="w-full bg-blacker border border-edge rounded px-3 py-2">
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Preço de Entrada:</label>
-          <input type="number" [(ngModel)]="partialPlanData.entry" step="0.25" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-      </div>
-
-      <!-- Níveis R -->
-      <div class="space-y-4">
-        <h4 class="font-medium text-gray-300">Níveis R</h4>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">R1:</label>
-          <input type="number" [(ngModel)]="partialPlanData.r1" step="0.25" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">R2:</label>
-          <input type="number" [(ngModel)]="partialPlanData.r2" step="0.25" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">R3:</label>
-          <input type="number" [(ngModel)]="partialPlanData.r3" step="0.25" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-      </div>
-
-      <!-- Percentuais -->
-      <div class="space-y-4">
-        <h4 class="font-medium text-gray-300">Distribuição (%)</h4>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">P1 (%):</label>
-          <input type="number" [(ngModel)]="partialPlanData.p1" min="0" max="100" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">P2 (%):</label>
-          <input type="number" [(ngModel)]="partialPlanData.p2" min="0" max="100" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">P3 (%):</label>
-          <input type="number" [(ngModel)]="partialPlanData.p3" min="0" max="100" 
-                 class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        </div>
-
-        <button (click)="generatePartialPlan()" [disabled]="loading"
-                class="w-full btn btn-primary mt-4">
-          🎯 Gerar Plano
-        </button>
-      </div>
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="font-semibold">🗂️ Plano de Execução</h3>
+    <div class="flex gap-2">
+      <button (click)="generatePartialPlan()" [disabled]="loading" class="px-3 py-2 rounded bg-cyanx/20 border border-cyanx/40 hover:bg-cyanx/30">Calcular</button>
+      <button (click)="exportPlan()" [disabled]="!planResult" class="px-3 py-2 rounded bg-gradient-to-r from-cyanx/20 to-cyanx/30 border border-cyanx/50">📄 Exportar Plano</button>
     </div>
-  </section>
-
-  <!-- Resultado do plano de parciais -->
-  <section *ngIf="planResult" class="card p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-semibold text-good">📋 Plano de Parciais Gerado</h3>
-      <button (click)="exportPlan()" class="btn btn-secondary">
-        💾 Exportar
-      </button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-edge">
+        <tr>
+          <th class="text-left py-2">Etapa</th>
+          <th class="text-right py-2">R (x)</th>
+          <th class="text-right py-2">Pontos</th>
+          <th class="text-right py-2">Preço</th>
+          <th class="text-right py-2">Contratos</th>
+          <th class="text-right py-2">PnL Parcial</th>
+          <th class="text-right py-2">PnL Acumulado</th>
+          <th class="text-left py-2">Ação de Stop</th>
+        </tr>
+      </thead>
+      <tbody id="planBody">
+        <tr *ngIf="!planResult" class="border-b border-edge/40">
+          <td class="py-2">Parcial 1</td>
+          <td class="text-right">1.00</td>
+          <td class="text-right">12.00</td>
+          <td class="text-right">20,012.00</td>
+          <td class="text-right">1</td>
+          <td class="text-right text-good">$24.00</td>
+          <td class="text-right text-good">$24.00</td>
+          <td class="text-left text-gray-300">Mover stop para BE se tocar P1</td>
+        </tr>
+        <tr *ngIf="!planResult" class="border-b border-edge/40">
+          <td class="py-2">Parcial 2</td>
+          <td class="text-right">1.50</td>
+          <td class="text-right">18.00</td>
+          <td class="text-right">20,018.00</td>
+          <td class="text-right">0</td>
+          <td class="text-right text-good">$0.00</td>
+          <td class="text-right text-good">$24.00</td>
+          <td class="text-left text-gray-300">Trail: último swing/0.5R</td>
+        </tr>
+        <tr *ngIf="!planResult" class="border-b border-edge/40">
+          <td class="py-2">Final</td>
+          <td class="text-right">2.00</td>
+          <td class="text-right">24.00</td>
+          <td class="text-right">20,024.00</td>
+          <td class="text-right">1</td>
+          <td class="text-right text-good">$48.00</td>
+          <td class="text-right text-good">$72.00</td>
+          <td class="text-left text-gray-300">Manter trail / alvo da meta</td>
+        </tr>
+        <tr *ngFor="let row of planResult?.rows" class="border-b border-edge/40">
+          <td class="py-2">{{ row.label }}</td>
+          <td class="text-right">{{ row.r }}</td>
+          <td class="text-right">{{ row.points }}</td>
+          <td class="text-right">{{ row.price }}</td>
+          <td class="text-right">{{ row.lots }}</td>
+          <td class="text-right" [ngClass]="row.pnL >= 0 ? 'text-good' : 'text-bad'">${{ row.pnL }}</td>
+          <td class="text-right" [ngClass]="row.pnLAccum >= 0 ? 'text-good' : 'text-bad'">${{ row.pnLAccum }}</td>
+          <td class="text-left text-gray-300">{{ row.stopAction }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="mt-3 text-xs text-gray-300">💡 Para equiparar à meta de ${{ partialPlanData.targetCash || 180 }}, ajuste o alvo final para ~ <strong>{{ ((partialPlanData.targetCash || 180) / ((partialPlanData.stopPts || 12) * (partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2)) * (partialPlanData.r3 || 2)).toFixed(2) }}</strong> R (≈ {{ ((partialPlanData.targetCash || 180) / ((partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2))).toFixed(2) }} pts).</div>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4 mt-4">
+    <div class="bg-edge/50 rounded p-3">
+      <div class="text-xs text-gray-400">Meta (pontos p/ contratos)</div>
+      <div class="text-lg font-bold" id="metaPtsVis">{{ ((partialPlanData.targetCash || 180) / ((partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2))).toFixed(2) }} pts • {{ partialPlanData.contracts || 2 }} ct</div>
+      <div class="text-xs text-gray-500">Ex.: {{ ((partialPlanData.targetCash || 180) / ((partialPlanData.usdPerPointPerContract || 2) * (partialPlanData.contracts || 2))).toFixed(2) }}pts com {{ partialPlanData.contracts || 2 }} contratos = ${{ partialPlanData.targetCash || 180 }}</div>
     </div>
-    
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-edge">
-          <tr class="text-gray-400">
-            <th class="text-left py-2">Etapa</th>
-            <th class="text-right py-2">R (x)</th>
-            <th class="text-right py-2">Pontos</th>
-            <th class="text-right py-2">Preço</th>
-            <th class="text-right py-2">Contratos</th>
-            <th class="text-right py-2">PnL Parcial</th>
-            <th class="text-right py-2">PnL Acumulado</th>
-            <th class="text-left py-2">Ação de Stop</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of planResult.rows" class="border-b border-edge/40">
-            <td class="py-2">{{ row.label }}</td>
-            <td class="text-right">{{ row.r }}</td>
-            <td class="text-right">{{ row.points }}</td>
-            <td class="text-right">{{ row.price }}</td>
-            <td class="text-right">{{ row.lots }}</td>
-            <td class="text-right" [ngClass]="row.pnL >= 0 ? 'text-good' : 'text-bad'">${{ row.pnL }}</td>
-            <td class="text-right" [ngClass]="row.pnLAccum >= 0 ? 'text-good' : 'text-bad'">${{ row.pnLAccum }}</td>
-            <td class="text-left text-gray-300">{{ row.stopAction }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="bg-edge/50 rounded p-3">
+      <div class="text-xs text-gray-400">PnL se carregar até a Meta</div>
+      <div class="text-lg font-bold text-good" id="metaCashVis">${{ partialPlanData.targetCash || '180.00' }}</div>
     </div>
-
-    <div class="grid md:grid-cols-3 gap-4 mt-6">
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">PnL do Plano</div>
-        <div class="text-lg font-bold text-good">${{ planResult.planPnL }}</div>
-      </div>
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">PnL Full Hold</div>
-        <div class="text-lg font-bold">${{ planResult.fullHoldPnL }}</div>
-      </div>
-      <div class="bg-edge/50 rounded p-4" *ngIf="planResult.hint">
-        <div class="text-xs text-gray-400">Dica</div>
-        <div class="text-sm text-accent">{{ planResult.hint }}</div>
-      </div>
+    <div class="bg-edge/50 rounded p-3">
+      <div class="text-xs text-gray-400">PnL do plano de parciais</div>
+      <div class="text-lg font-bold" id="planoCashVis" [ngClass]="(planResult?.planPnL || 0) >= 0 ? 'text-good' : 'text-bad'">${{ planResult?.planPnL || '72.00' }}</div>
+      <div class="text-xs text-gray-500">Se menor que a meta, ajuste R3 ou %.</div>
     </div>
-  </section>
-
-  <!-- Seção para otimizar parciais -->
-  <section class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-accent">🎲 Otimizar Parciais</h3>
-    <div class="grid md:grid-cols-4 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Stop (pontos):</label>
-        <input type="number" [(ngModel)]="optimizeData.stopPts" step="0.25" 
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1"># Contratos:</label>
-        <input type="number" [(ngModel)]="optimizeData.contracts" min="1" max="10" 
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Alvo R:</label>
-        <input type="number" [(ngModel)]="optimizeData.targetR" step="0.25" 
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Preset de Curva:</label>
-        <select [(ngModel)]="optimizeData.curvePreset" 
-                class="w-full bg-blacker border border-edge rounded px-3 py-2">
-          <option value="conservative">Conservador</option>
-          <option value="neutral">Neutro</option>
-          <option value="aggressive">Agressivo</option>
-        </select>
-      </div>
-    </div>
-
-    <button (click)="optimizePartials()" [disabled]="loading"
-            class="btn btn-primary mt-4">
-      🎲 Otimizar
-    </button>
-  </section>
-
-  <!-- Resultado da otimização -->
-  <section *ngIf="optimizeResult" class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-accent">🎯 Resultado da Otimização</h3>
-    <div class="grid md:grid-cols-2 gap-6">
-      <div>
-        <h4 class="font-medium text-gray-300 mb-3">Configurações Otimizadas</h4>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-400">R1:</span>
-            <span class="font-medium">{{ optimizeResult.r1 }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">R2:</span>
-            <span class="font-medium">{{ optimizeResult.r2 }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">R3:</span>
-            <span class="font-medium">{{ optimizeResult.r3 }}</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <h4 class="font-medium text-gray-300 mb-3">Distribuição Otimizada</h4>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-400">P1:</span>
-            <span class="font-medium">{{ optimizeResult.p1 }}%</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">P2:</span>
-            <span class="font-medium">{{ optimizeResult.p2 }}%</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">P3:</span>
-            <span class="font-medium">{{ optimizeResult.p3 }}%</span>
-          </div>
-          <div class="flex justify-between pt-2 border-t border-edge">
-            <span class="text-gray-400">EV Esperado:</span>
-            <span class="font-bold text-good">${{ optimizeResult.ev }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
+  </div>
+</section>

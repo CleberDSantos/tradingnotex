@@ -1,15 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { RiskService } from '../services/risk.service';
 import { FormsModule } from '@angular/forms';
-import { NgIf, NgFor, NgClass, JsonPipe } from '@angular/common';
+import { NgIf, NgFor, NgClass, JsonPipe, CurrencyPipe, DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-risk',
-  imports: [FormsModule, NgIf, NgFor, NgClass, JsonPipe],
+  imports: [FormsModule, NgIf, NgFor, NgClass, JsonPipe, CurrencyPipe, DatePipe],
   templateUrl: './risk.html',
   styleUrl: './risk.scss'
 })
-export class Risk {
+export class RiskComponent {
+  @Input() riskData: any;
+  @Input() trades: any[] = [];
   dayRiskData = {
     day: '',
     goalEUR: 2.00,
@@ -121,5 +123,38 @@ export class Risk {
   getDisciplinedDaysCount(): number {
     if (!this.rangeRiskResult?.results) return 0;
     return this.rangeRiskResult.results.filter((r: any) => !r.greed && !r.lossBreach).length;
+  }
+
+  applyFilters() {
+    // Lógica para aplicar filtros (delegar para o dashboard ou serviço)
+    if (this.riskData) {
+      this.evaluateRangeRisk();
+    }
+  }
+
+  clearFilters() {
+    // Resetar dados de risco
+    this.riskData = {
+      goalEUR: 2.00,
+      maxLossEUR: 2.00,
+      selectedDay: '',
+      impact: 0,
+      greedDays: 0,
+      lossDays: 0,
+      compliantDays: 0
+    };
+    this.dayRiskData = {
+      day: '',
+      goalEUR: 2.00,
+      maxLossEUR: 2.00
+    };
+    this.rangeRiskData = {
+      start: '',
+      end: '',
+      goalEUR: 2.00,
+      maxLossEUR: 2.00
+    };
+    this.dayRiskResult = null;
+    this.rangeRiskResult = null;
   }
 }

@@ -15,6 +15,7 @@ export interface PartialPlanRequest {
   p2: number;
   p3: number;
   usdPerPointPerContract?: number;
+  targetCash?: number;
 }
 
 @Injectable({

@@ -1,220 +1,57 @@
-<div class="max-w-7xl mx-auto p-4 space-y-6">
-  <header class="mb-6">
-    <h1 class="text-3xl font-black text-gray-100">🛡️ Avaliação de Risco</h1>
-    <p class="text-sm text-gray-400 mt-1">Análise de disciplina e gestão de risco</p>
-  </header>
-
-  <!-- Loading Indicator -->
-  <div *ngIf="loading" class="flex justify-center items-center py-8">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyanx"></div>
+<section class="card p-4">
+  <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">🛡️ Gestão de Risco <span class="chip bg-gradient-to-r from-accent/20 to-accent/30">Meta vs Loss</span></h2>
+  <div class="grid md:grid-cols-4 gap-4 items-end">
+    <div>
+      <div class="text-xs muted mb-1">Meta diária (take-profit) €</div>
+      <input [(ngModel)]="riskData.goalEUR" type="number" step="0.01" class="w-full bg-blacker border border-edge rounded px-3 py-2" placeholder="ex: 2.00">
+    </div>
+    <div>
+      <div class="text-xs muted mb-1">Loss diário (máx. perda) €</div>
+      <input [(ngModel)]="riskData.maxLossEUR" type="number" step="0.01" class="w-full bg-blacker border border-edge rounded px-3 py-2" placeholder="ex: 2.00">
+    </div>
+    <div>
+      <div class="text-xs muted mb-1">Selecionar dia</div>
+      <select [(ngModel)]="riskData.selectedDay" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+        <option *ngFor="let t of trades" [value]="t.executedAtUTC | date:'yyyy-MM-dd'">{{ t.executedAtUTC | date:'yyyy-MM-dd' }}</option>
+      </select>
+    </div>
+    <div class="flex gap-2">
+      <button (click)="applyFilters()" class="px-4 py-2 rounded bg-good/20 hover:bg-good/30 border border-good/50">✅ Aplicar</button>
+      <button (click)="clearFilters()" class="px-4 py-2 rounded border border-edge hover:bg-card">🔄 Reset</button>
+    </div>
   </div>
 
-  <!-- Error Message -->
-  <div *ngIf="error" class="bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded mb-4">
-    {{ error }}
+  <div class="grid md:grid-cols-4 gap-4 mt-4">
+    <div class="card p-4 border-l-4 border-cyanx">
+      <div class="text-xs muted">Impacto das quebras (período)</div>
+      <div class="text-2xl font-extrabold mt-2">{{ riskData.impact | currency:'EUR' }}</div>
+      <div class="text-xs muted mt-1">Quanto teria melhorado seguindo as regras</div>
+    </div>
+    <div class="card p-4 border-l-4 border-accent">
+      <div class="text-xs muted">Dias com ganância</div>
+      <div class="text-2xl font-extrabold text-accent mt-2">{{ riskData.greedDays }}</div>
+      <div class="text-xs muted mt-1">Continuou após bater a meta</div>
+    </div>
+    <div class="card p-4 border-l-4 border-bad">
+      <div class="text-xs muted">Dias com loss quebrado</div>
+      <div class="text-2xl font-extrabold text-bad mt-2">{{ riskData.lossDays }}</div>
+      <div class="text-xs muted mt-1">Passou do limite de perda</div>
+    </div>
+    <div class="card p-4 border-l-4 border-good">
+      <div class="text-xs muted">Dias obedecendo regras</div>
+      <div class="text-2xl font-extrabold text-good mt-2">{{ riskData.compliantDays }}</div>
+      <div class="text-xs muted mt-1">Nenhuma quebra detectada</div>
+    </div>
   </div>
 
-  <!-- Seção para avaliação de risco de dia -->
-  <section class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-good">📅 Avaliar Risco de Dia</h3>
-    <div class="grid md:grid-cols-4 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Dia:</label>
-        <input type="date" [(ngModel)]="dayRiskData.day"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
+  <div class="mt-6">
+    <h3 class="text-lg font-semibold mb-2">📈 Resultado diário — <span class="text-green-400">disciplinado</span> vs <span class="text-red-400">real</span></h3>
+    <div id="chartDailyComparison" style="height: 340px;" class="rounded-lg"></div>
+    <div class="text-xs muted mt-2 flex gap-4"><span>📍 Marcadores:</span><span class="text-yellow-300">▲ Ganância</span><span class="text-red-400">✖ Loss quebrado</span></div>
+  </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Meta (€):</label>
-        <input type="number" [(ngModel)]="dayRiskData.goalEUR" step="0.01"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Perda Máxima (€):</label>
-        <input type="number" [(ngModel)]="dayRiskData.maxLossEUR" step="0.01"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div class="flex items-end">
-        <button (click)="evaluateDayRisk()" [disabled]="loading"
-                class="btn btn-primary w-full">
-          📊 Avaliar Dia
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Resultado da avaliação de risco de dia -->
-  <section *ngIf="dayRiskResult" class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-good">📊 Resultado da Avaliação - {{ dayRiskResult.day }}</h3>
-
-    <div class="grid md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Resultado Final</div>
-        <div class="text-xl font-bold"
-             [ngClass]="dayRiskResult.final >= 0 ? 'text-good' : 'text-bad'">
-          {{ formatCurrency(dayRiskResult.final) }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Resultado Disciplinado</div>
-        <div class="text-xl font-bold text-cyanx">
-          {{ formatCurrency(dayRiskResult.disciplined) }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Impacto da Disciplina</div>
-        <div class="text-xl font-bold"
-             [ngClass]="dayRiskResult.impact >= 0 ? 'text-good' : 'text-bad'">
-          {{ formatCurrency(dayRiskResult.impact) }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Status</div>
-        <div class="text-sm">
-          <span *ngIf="dayRiskResult.greed" class="text-accent">⚠️ Ganância</span>
-          <span *ngIf="dayRiskResult.lossBreach" class="text-bad">❌ Loss Quebrado</span>
-          <span *ngIf="!dayRiskResult.greed && !dayRiskResult.lossBreach" class="text-good">✅ Disciplinado</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid md:grid-cols-2 gap-6">
-      <div *ngIf="dayRiskResult.hitGoalAt">
-        <h4 class="font-medium text-gray-300 mb-2">🎯 Meta Atingida</h4>
-        <p class="text-gray-400">{{ formatDateTime(dayRiskResult.hitGoalAt) }}</p>
-      </div>
-
-      <div *ngIf="dayRiskResult.hitLossAt">
-        <h4 class="font-medium text-gray-300 mb-2">🚫 Loss Atingido</h4>
-        <p class="text-gray-400">{{ formatDateTime(dayRiskResult.hitLossAt) }}</p>
-      </div>
-    </div>
-
-    <div *ngIf="dayRiskResult.curve && dayRiskResult.curve.length > 0" class="mt-6">
-      <h4 class="font-medium text-gray-300 mb-4">📈 Curva de Equity Intraday</h4>
-      <div class="bg-blacker rounded p-4">
-        <div class="text-sm text-gray-400 mb-2">
-          Pontos: {{ dayRiskResult.curve.length }} trades
-        </div>
-        <!-- Aqui você pode adicionar um gráfico mais tarde -->
-        <div class="grid grid-cols-4 gap-2">
-          <div *ngFor="let point of dayRiskResult.curve.slice(0, 12)"
-               class="text-xs p-2 rounded"
-               [ngClass]="point.equity >= 0 ? 'bg-good/20 text-good' : 'bg-bad/20 text-bad'">
-            {{ formatCurrency(point.equity) }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Seção para avaliação de risco de range -->
-  <section class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-accent">📅 Avaliar Risco de Período</h3>
-    <div class="grid md:grid-cols-5 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Data Início:</label>
-        <input type="date" [(ngModel)]="rangeRiskData.start"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Data Fim:</label>
-        <input type="date" [(ngModel)]="rangeRiskData.end"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Meta (€):</label>
-        <input type="number" [(ngModel)]="rangeRiskData.goalEUR" step="0.01"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Perda Máxima (€):</label>
-        <input type="number" [(ngModel)]="rangeRiskData.maxLossEUR" step="0.01"
-               class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-
-      <div class="flex items-end">
-        <button (click)="evaluateRangeRisk()" [disabled]="loading"
-                class="btn btn-primary w-full">
-          📊 Avaliar Período
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Resultado da avaliação de risco de range -->
-  <section *ngIf="rangeRiskResult" class="card p-6">
-    <h3 class="text-xl font-semibold mb-4 text-accent">📊 Resultado da Avaliação - Período</h3>
-
-    <div class="grid md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Total de Dias</div>
-        <div class="text-xl font-bold text-cyanx">
-          {{ rangeRiskResult.results?.length || 0 }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Dias com Ganância</div>
-        <div class="text-xl font-bold text-accent">
-          {{ getGreedDaysCount() }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Dias com Loss Quebrado</div>
-        <div class="text-xl font-bold text-bad">
-          {{ getLossBreachDaysCount() }}
-        </div>
-      </div>
-
-      <div class="bg-edge/50 rounded p-4">
-        <div class="text-xs text-gray-400">Dias Disciplinados</div>
-        <div class="text-xl font-bold text-good">
-          {{ getDisciplinedDaysCount() }}
-        </div>
-      </div>
-    </div>
-
-    <div *ngIf="rangeRiskResult.results && rangeRiskResult.results.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-edge">
-          <tr class="text-gray-400">
-            <th class="text-left py-2">Data</th>
-            <th class="text-right py-2">Final</th>
-            <th class="text-right py-2">Disciplinado</th>
-            <th class="text-right py-2">Impacto</th>
-            <th class="text-center py-2">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let result of rangeRiskResult.results" class="border-b border-edge/40">
-            <td class="py-2">{{ result.day }}</td>
-            <td class="text-right" [ngClass]="result.final >= 0 ? 'text-good' : 'text-bad'">
-              {{ formatCurrency(result.final) }}
-            </td>
-            <td class="text-right text-cyanx">
-              {{ formatCurrency(result.disciplined) }}
-            </td>
-            <td class="text-right" [ngClass]="result.impact >= 0 ? 'text-good' : 'text-bad'">
-              {{ formatCurrency(result.impact) }}
-            </td>
-            <td class="text-center">
-              <span *ngIf="result.greed" class="text-accent">⚠️</span>
-              <span *ngIf="result.lossBreach" class="text-bad">❌</span>
-              <span *ngIf="!result.greed && !result.lossBreach" class="text-good">✅</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-</div>
+  <div class="mt-6">
+    <h3 class="text-lg font-semibold mb-2">📊 Intraday do dia selecionado</h3>
+    <div id="chartIntraday" style="height: 360px;" class="rounded-lg"></div>
+  </div>
+</section>

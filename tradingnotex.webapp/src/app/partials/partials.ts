@@ -21,7 +21,8 @@ export class Partials {
     p1: 50,
     p2: 30,
     p3: 20,
-    usdPerPointPerContract: 2.0
+    usdPerPointPerContract: 2.0,
+    targetCash: 180
   };
 
   optimizeData = {

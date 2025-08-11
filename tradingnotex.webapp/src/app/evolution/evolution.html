@@ -1,0 +1,38 @@
+<div id="tab-evolution" class="tab-panel active">
+  <section class="grid md:grid-cols-3 gap-6">
+    <div class="card p-4">
+      <div class="flex justify-between items-start mb-3">
+        <h3 class="font-medium">Este Mês vs Anterior</h3>
+        <span class="text-xs bg-good/20 text-good px-2 py-1 rounded" id="evoMonthBadge">—</span>
+      </div>
+      <div class="space-y-3" id="evoMonth"></div>
+    </div>
+    <div class="card p-4">
+      <div class="flex justify-between items-start mb-3">
+        <h3 class="font-medium">Esta Semana vs Anterior</h3>
+        <span class="text-xs bg-accent/20 text-accent px-2 py-1 rounded" id="evoWeekBadge">—</span>
+      </div>
+      <div class="space-y-3" id="evoWeek"></div>
+    </div>
+    <div class="card p-4">
+      <div class="flex justify-between items-start mb-3">
+        <h3 class="font-medium">Evolução Trimestral</h3>
+        <span class="text-xs bg-good/20 text-good px-2 py-1 rounded">—</span>
+      </div>
+      <div class="flex items-center justify-center h-32 relative">
+        <svg width="120" height="120" class="progress-ring">
+          <circle cx="60" cy="60" r="50" stroke="#1b2330" stroke-width="10" fill="none"></circle>
+          <circle id="evoRing" cx="60" cy="60" r="50" stroke="#10b981" stroke-width="10" fill="none" stroke-dasharray="314" stroke-dashoffset="314" class="progress-ring-circle"></circle>
+        </svg>
+        <div class="absolute text-center">
+          <div class="text-2xl font-bold" id="evoRingPct">0%</div>
+          <div class="text-xs text-gray-400">Meta Atingida</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="card p-4 mt-4">
+    <h3 class="font-semibold mb-3">📈 Curva de Evolução (6 meses)</h3>
+    <div id="evolutionChart" style="height: 300px; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); position: relative;"></div>
+  </section>
+</div>
