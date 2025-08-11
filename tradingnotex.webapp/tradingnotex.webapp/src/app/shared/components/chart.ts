@@ -56,46 +56,45 @@ export class Chart implements OnInit, OnDestroy {
 
   private chart: any;
 
-  ngOnInit() 
+  ngOnInit() {
+    this.initChart();
+  }
 
-echo "✅ Migração concluída com sucesso!"
-echo ""
-echo "🎯 PRÓXIMOS PASSOS:"
-echo "==================="
-echo "1. Inicie o backend:"
-echo "   cd tradingnotex/tradingnotex.api"
-echo "   dotnet run"
-echo ""
-echo "2. Inicie o frontend:"
-echo "   cd tradingnotex.webapp"
-echo "   npm start"
-echo ""
-echo "3. Acesse a aplicação:"
-echo "   Frontend: http://localhost:4200"
-echo "   Backend API: https://localhost:44368"
-echo "   Swagger: https://localhost:44368/swagger"
-echo ""
-echo "4. Credenciais de teste:"
-echo "   Username: demo"
-echo "   Password: demo123"
-echo ""
-echo "🔍 PRINCIPAIS MUDANÇAS:"
-echo "======================="
-echo "✅ Dashboard agora carrega dados da API"
-echo "✅ JavaScript extraído para componentes Angular"
-echo "✅ Navegação dinâmica implementada"
-echo "✅ Login funcional com autenticação"
-echo "✅ Filtros e KPIs dinâmicos"
-echo "✅ Estrutura de componentes organizada"
-echo "✅ Estilos modernos com Tailwind CSS"
-echo ""
-echo "📋 FUNCIONALIDADES IMPLEMENTADAS:"
-echo "================================="
-echo "• Login/Logout com autenticação JWT"
-echo "• Dashboard com KPIs em tempo real"
-echo "• Lista de trades dinâmica"
-echo "• Filtros por instrumento e data"
-echo "• Insights gerados pela API"
-echo "• Heatmap de horários"
-echo "• Navegação protegida por guards"
-echo "• Responsive design"
+  ngOnDestroy() {
+    if (this.chart) {
+      this.chart.dispose();
+    }
+  }
+
+  private initChart() {
+    if (typeof echarts === 'undefined') {
+      console.warn('ECharts library not loaded');
+      return;
+    }
+
+    this.chart = echarts.init(this.chartContainer.nativeElement, this.theme);
+    
+    if (this.options) {
+      this.updateChart();
+    }
+
+    // Responsivo
+    window.addEventListener('resize', () => {
+      if (this.chart) {
+        this.chart.resize();
+      }
+    });
+  }
+
+  updateChart() {
+    if (this.chart && this.options) {
+      this.chart.setOption(this.options, true);
+    }
+  }
+
+  // Método público para atualizar as opções
+  setOption(options: any) {
+    this.options = options;
+    this.updateChart();
+  }
+}

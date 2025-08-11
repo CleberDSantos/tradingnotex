@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { RiskService } from '../services/risk.service';
 import { FormsModule } from '@angular/forms';
-import { NgIf, JsonPipe } from '@angular/common';
+import { NgIf, NgFor, NgClass, JsonPipe } from '@angular/common';
 
 @Component({
   selector: 'app-risk',
-  imports: [FormsModule, NgIf, JsonPipe],
+  imports: [FormsModule, NgIf, NgFor, NgClass, JsonPipe],
   templateUrl: './risk.html',
   styleUrl: './risk.scss'
 })

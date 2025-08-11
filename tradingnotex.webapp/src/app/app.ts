@@ -2,10 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { Navigation } from './navigation/navigation';
 import { AuthStateService } from './services/auth-state.service';
+import { NgIf } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Navigation],
+  imports: [RouterOutlet, Navigation, NgIf],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -22,5 +23,9 @@ export class App implements OnInit {
     if (!this.authStateService.isAuthenticated()) {
       this.router.navigate(['/login']);
     }
+  }
+
+  isAuthenticated(): boolean {
+    return this.authStateService.isAuthenticated();
   }
 }
