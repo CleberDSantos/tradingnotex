@@ -1,0 +1,128 @@
+<div class="risk-container">
+  <h2>Avaliação de Risco</h2>
+
+  <!-- Mensagem de erro -->
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Indicador de carregamento -->
+  <div *ngIf="loading" class="loading">Processando...</div>
+
+  <!-- Seção para avaliação de risco de dia -->
+  <section class="form-section">
+    <h3>Avaliar Risco de Dia</h3>
+    <form (ngSubmit)="evaluateDayRisk()" #dayForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="day">Dia (YYYY-MM-DD):</label>
+          <input
+            type="text"
+            id="day"
+            name="day"
+            [(ngModel)]="dayRiskData.day"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="dayGoalEUR">Meta (€):</label>
+          <input
+            type="number"
+            id="dayGoalEUR"
+            name="dayGoalEUR"
+            [(ngModel)]="dayRiskData.goalEUR"
+            step="0.01"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="dayMaxLossEUR">Perda Máxima (€):</label>
+          <input
+            type="number"
+            id="dayMaxLossEUR"
+            name="dayMaxLossEUR"
+            [(ngModel)]="dayRiskData.maxLossEUR"
+            step="0.01"
+            required
+            class="form-control">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Avaliar Dia
+      </button>
+    </form>
+  </section>
+
+  <!-- Resultado da avaliação de risco de dia -->
+  <section *ngIf="dayRiskResult" class="result-section">
+    <h3>Resultado da Avaliação de Dia</h3>
+    <pre>{{ dayRiskResult | json }}</pre>
+  </section>
+
+  <!-- Seção para avaliação de risco de range -->
+  <section class="form-section">
+    <h3>Avaliar Risco de Range</h3>
+    <form (ngSubmit)="evaluateRangeRisk()" #rangeForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="start">Data Início (YYYY-MM-DD):</label>
+          <input
+            type="text"
+            id="start"
+            name="start"
+            [(ngModel)]="rangeRiskData.start"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="end">Data Fim (YYYY-MM-DD):</label>
+          <input
+            type="text"
+            id="end"
+            name="end"
+            [(ngModel)]="rangeRiskData.end"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="rangeGoalEUR">Meta (€):</label>
+          <input
+            type="number"
+            id="rangeGoalEUR"
+            name="rangeGoalEUR"
+            [(ngModel)]="rangeRiskData.goalEUR"
+            step="0.01"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="rangeMaxLossEUR">Perda Máxima (€):</label>
+          <input
+            type="number"
+            id="rangeMaxLossEUR"
+            name="rangeMaxLossEUR"
+            [(ngModel)]="rangeRiskData.maxLossEUR"
+            step="0.01"
+            required
+            class="form-control">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Avaliar Range
+      </button>
+    </form>
+  </section>
+
+  <!-- Resultado da avaliação de risco de range -->
+  <section *ngIf="rangeRiskResult" class="result-section">
+    <h3>Resultado da Avaliação de Range</h3>
+    <pre>{{ rangeRiskResult | json }}</pre>
+  </section>
+</div>

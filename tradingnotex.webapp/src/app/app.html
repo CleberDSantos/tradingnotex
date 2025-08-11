@@ -1,0 +1,390 @@
+<div class="max-w-7xl mx-auto p-4 space-y-6">
+
+  <!-- Header -->
+  <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
+    <div>
+      <h1 class="text-3xl font-black text-gray-100">📊 Dashboard de Trades <span class="text-gray-500 text-xl">— Unificado</span></h1>
+      <p class="text-sm text-gray-400 mt-1">Base SMC OTE — tudo em um lugar</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50 cursor-pointer">
+        <span class="flex items-center gap-2">📁 Importar JSON</span>
+        <input type="file" id="fileInput" accept="application/json" class="hidden">
+      </label>
+      <button id="btnDemo" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button>
+
+      <!-- Alerts bell -->
+      <button id="btnAlerts" class="relative p-2 rounded border border-edge hover:bg-card" title="Alertas">
+        🔔
+        <span id="alertsBadge" class="absolute -top-1 -right-1 text-[10px] bg-bad text-white rounded-full px-1.5 py-0.5 hidden">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Filtros e Agrupamento -->
+  <section class="card p-4 animate-slide-up" style="animation-delay: .05s">
+    <h2 class="text-lg font-semibold mb-3">🔍 Filtros e Agrupamento</h2>
+    <div class="grid md:grid-cols-5 gap-3">
+      <div>
+        <label class="text-xs muted block mb-1">Instrumento</label>
+        <input id="fltInstrument" type="text" placeholder="ex: TECH100" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="text-xs muted block mb-1">Data Início</label>
+        <input id="fltStart" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="text-xs muted block mb-1">Data Fim</label>
+        <input id="fltEnd" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="text-xs muted block mb-1">Agrupar por</label>
+        <select id="groupBy" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          <option value="instrument">Instrumento</option>
+          <option value="day">Dia</option>
+          <option value="week">Semana</option>
+          <option value="month">Mês</option>
+          <option value="hour">Hora</option>
+          <option value="side">Side</option>
+        </select>
+      </div>
+      <div class="flex gap-2 items-end">
+        <button id="btnApply" class="px-4 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">✅ Aplicar</button>
+        <button id="btnClear" class="px-4 py-2 rounded border border-edge hover:bg-card">❌ Limpar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs Linha 1 -->
+  <section id="kpiGlobal" class="grid grid-cols-2 md:grid-cols-6 grid-gap animate-slide-up" style="animation-delay: .1s"></section>
+
+  <!-- KPIs Linha 2 (Resumo SMC OTE) -->
+  <section class="grid md:grid-cols-4 grid-gap animate-slide-up" style="animation-delay: .12s">
+    <div class="card p-4 border-t-4 border-good">
+      <div class="text-xs text-gray-400">P/L 30 dias</div>
+      <div class="text-2xl font-bold text-good mt-1" id="kpiPL30">€0</div>
+      <div class="text-xs text-gray-500">Expectancy: <span id="kpiExp30">€0</span>/trade</div>
+    </div>
+    <div class="card p-4 border-t-4 border-cyanx">
+      <div class="text-xs text-gray-400">Win Rate</div>
+      <div class="text-2xl font-bold text-cyanx mt-1" id="kpiWR30">0%</div>
+      <div class="text-xs text-gray-500">Payoff médio <span id="kpiPayoff">—</span></div>
+    </div>
+    <div class="card p-4 border-t-4 border-accent">
+      <div class="text-xs text-gray-400">MAE / MFE (médio)</div>
+      <div class="text-2xl font-bold text-accent mt-1" id="kpiMaeMfe">—</div>
+      <div class="text-xs text-gray-500">Controle de calor</div>
+    </div>
+    <div class="card p-4 border-t-4 border-bad">
+      <div class="text-xs text-gray-400">Maior DD (mês)</div>
+      <div class="text-2xl font-bold text-bad mt-1" id="kpiMaxDD">—</div>
+      <div class="text-xs text-gray-500">Recuperação: <span id="kpiDDRecover">—</span></div>
+    </div>
+  </section>
+
+  <!-- Insights -->
+  <section id="insights" class="card p-4 animate-slide-up" style="animation-delay: .15s">
+    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Insights em linguagem simples</h2>
+    <div id="insightsBody" class="space-y-2 text-gray-200"></div>
+  </section>
+
+  <!-- Heatmap Hora x Dia -->
+  <section class="card p-4 animate-slide-up" style="animation-delay: .18s">
+    <h2 class="text-lg font-semibold mb-3">⏱️ Heatmap — Hora x Dia (P/L)</h2>
+    <div id="heatmapHoraDia" style="height: 300px" class="rounded-lg"></div>
+  </section>
+
+  <!-- Abas -->
+  <section class="animate-slide-up" style="animation-delay: .2s">
+    <div role="tablist" class="flex flex-wrap gap-2 mb-3">
+      <button class="tab-btn px-3 py-1.5 rounded border border-edge hover:bg-card" data-tab="risk" aria-selected="true">🛡️ Gestão de Risco</button>
+      <button class="tab-btn px-3 py-1.5 rounded border border-edge hover:bg-card" data-tab="evolution">📈 Evolução</button>
+      <button class="tab-btn px-3 py-1.5 rounded border border-edge hover:bg-card" data-tab="achievements">🏆 Conquistas</button>
+      <button class="tab-btn px-3 py-1.5 rounded border border-edge hover:bg-card" data-tab="plan">🧭 Plano de Parciais & Stop</button>
+    </div>
+
+    <!-- Painel: Gestão de Risco (do app 1) -->
+    <div id="tab-risk" class="tab-panel active">
+      <section class="card p-4">
+        <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">🛡️ Gestão de Risco <span class="chip bg-gradient-to-r from-accent/20 to-accent/30">Meta vs Loss</span></h2>
+        <div class="grid md:grid-cols-4 gap-4 items-end">
+          <div>
+            <div class="text-xs muted mb-1">Meta diária (take-profit) €</div>
+            <input id="riskGoalInput" type="number" step="0.01" class="w-full bg-blacker border border-edge rounded px-3 py-2" placeholder="ex: 2.00">
+          </div>
+          <div>
+            <div class="text-xs muted mb-1">Loss diário (máx. perda) €</div>
+            <input id="riskLossInput" type="number" step="0.01" class="w-full bg-blacker border border-edge rounded px-3 py-2" placeholder="ex: 2.00">
+          </div>
+          <div>
+            <div class="text-xs muted mb-1">Selecionar dia</div>
+            <select id="riskDaySelect" class="w-full bg-blacker border border-edge rounded px-3 py-2"></select>
+          </div>
+          <div class="flex gap-2">
+            <button id="riskApply" class="px-4 py-2 rounded bg-good/20 hover:bg-good/30 border border-good/50">✅ Aplicar</button>
+            <button id="riskReset" class="px-4 py-2 rounded border border-edge hover:bg-card">🔄 Reset</button>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-4 gap-4 mt-4">
+          <div class="card p-4 border-l-4 border-cyanx">
+            <div class="text-xs muted">Impacto das quebras (período)</div>
+            <div id="kpiImpact" class="text-2xl font-extrabold mt-2"></div>
+            <div class="text-xs muted mt-1">Quanto teria melhorado seguindo as regras</div>
+          </div>
+          <div class="card p-4 border-l-4 border-accent">
+            <div class="text-xs muted">Dias com ganância</div>
+            <div id="kpiGreed" class="text-2xl font-extrabold text-accent mt-2"></div>
+            <div class="text-xs muted mt-1">Continuou após bater a meta</div>
+          </div>
+          <div class="card p-4 border-l-4 border-bad">
+            <div class="text-xs muted">Dias com loss quebrado</div>
+            <div id="kpiLossBreach" class="text-2xl font-extrabold text-bad mt-2"></div>
+            <div class="text-xs muted mt-1">Passou do limite de perda</div>
+          </div>
+          <div class="card p-4 border-l-4 border-good">
+            <div class="text-xs muted">Dias obedecendo regras</div>
+            <div id="kpiCompliant" class="text-2xl font-extrabold text-good mt-2"></div>
+            <div class="text-xs muted mt-1">Nenhuma quebra detectada</div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-lg font-semibold mb-2">📈 Resultado diário — <span class="text-green-400">disciplinado</span> vs <span class="text-red-400">real</span></h3>
+          <div id="chartDailyComparison" style="height: 340px;" class="rounded-lg"></div>
+          <div class="text-xs muted mt-2 flex gap-4"><span>📍 Marcadores:</span><span class="text-yellow-300">▲ Ganância</span><span class="text-red-400">✖ Loss quebrado</span></div>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-lg font-semibold mb-2">📊 Intraday do dia selecionado</h3>
+          <div id="chartIntraday" style="height: 360px;" class="rounded-lg"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Painel: Evolução -->
+    <div id="tab-evolution" class="tab-panel">
+      <section class="grid md:grid-cols-3 grid-gap">
+        <div class="card p-4">
+          <div class="flex justify-between items-start mb-3">
+            <h3 class="font-medium">Este Mês vs Anterior</h3>
+            <span class="text-xs bg-good/20 text-good px-2 py-1 rounded" id="evoMonthBadge">—</span>
+          </div>
+          <div class="space-y-3" id="evoMonth"></div>
+        </div>
+        <div class="card p-4">
+          <div class="flex justify-between items-start mb-3">
+            <h3 class="font-medium">Esta Semana vs Anterior</h3>
+            <span class="text-xs bg-accent/20 text-accent px-2 py-1 rounded" id="evoWeekBadge">—</span>
+          </div>
+          <div class="space-y-3" id="evoWeek"></div>
+        </div>
+        <div class="card p-4">
+          <div class="flex justify-between items-start mb-3">
+            <h3 class="font-medium">Evolução Trimestral</h3>
+            <span class="text-xs bg-good/20 text-good px-2 py-1 rounded">—</span>
+          </div>
+          <div class="flex items-center justify-center h-32 relative">
+            <svg width="120" height="120" class="progress-ring">
+              <circle cx="60" cy="60" r="50" stroke="#1b2330" stroke-width="10" fill="none"/>
+              <circle id="evoRing" cx="60" cy="60" r="50" stroke="#10b981" stroke-width="10" fill="none" stroke-dasharray="314" stroke-dashoffset="314" class="progress-ring-circle"/>
+            </svg>
+            <div class="absolute text-center">
+              <div class="text-2xl font-bold" id="evoRingPct">0%</div>
+              <div class="text-xs text-gray-400">Meta Atingida</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="card p-4 mt-4">
+        <h3 class="font-semibold mb-3">📈 Curva de Evolução (6 meses)</h3>
+        <div id="evolutionChart" style="height: 300px"></div>
+      </section>
+    </div>
+
+    <!-- Painel: Conquistas -->
+    <div id="tab-achievements" class="tab-panel">
+      <section class="grid md:grid-cols-4 grid-gap">
+        <div class="card p-4 text-center badge-card" style="--badge-color-1: #10b981; --badge-color-2: #059669;">
+          <div class="text-4xl mb-2">🎯</div>
+          <h3 class="font-bold">Sniper</h3>
+          <p class="text-xs text-gray-300">10 trades consecutivos no lucro</p>
+          <div class="text-xs mt-2 opacity-75">—</div>
+        </div>
+        <div class="card p-4 text-center badge-card" style="--badge-color-1: #3b82f6; --badge-color-2: #1d4ed8;">
+          <div class="text-4xl mb-2">🛡️</div>
+          <h3 class="font-bold">Disciplinado</h3>
+          <p class="text-xs text-gray-300">30 dias respeitando stop loss</p>
+          <div class="text-xs mt-2 opacity-75">—</div>
+        </div>
+        <div class="card p-4 text-center badge-card" style="--badge-color-1: #f59e0b; --badge-color-2: #d97706;">
+          <div class="text-4xl mb-2">📊</div>
+          <h3 class="font-bold">Analista</h3>
+          <p class="text-xs text-gray-300">100 trades documentados</p>
+          <div class="text-xs mt-2 opacity-75">—</div>
+        </div>
+        <div class="card p-4 text-center opacity-50">
+          <div class="text-4xl mb-2 grayscale">💎</div>
+          <h3 class="font-bold">Consistente</h3>
+          <p class="text-xs text-gray-500">3 meses consecutivos no lucro</p>
+          <div class="mt-2">
+            <div class="w-full bg-edge rounded-full h-2"><div id="achConsistBar" class="bg-gradient-to-r from-cyanx to-accent h-2 rounded-full" style="width: 0%"></div></div>
+            <div class="text-xs mt-1" id="achConsistText">0/3 meses</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Painel: Plano de Parciais & Stop (compacto do app 3) -->
+    <div id="tab-plan" class="tab-panel">
+      <section class="grid md:grid-cols-4 grid-gap">
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3">🎯 Objetivo & Contratos</h3>
+          <label class="text-xs text-gray-400">Meta (cash)</label>
+          <select id="metaCash" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+            <option value="180">Meta 1 — $180</option>
+            <option value="240">Meta 2 — $240</option>
+            <option value="300">Meta 3 — $300</option>
+            <option value="360">Fora da curva — $360</option>
+          </select>
+          <label class="text-xs text-gray-400 block mt-3"># Contratos (MNQ)</label>
+          <input id="contracts" type="number" min="1" max="10" value="2" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none"/>
+          <p class="text-xs text-gray-500 mt-2">Referência planilha (2,3,5,8,10).</p>
+        </div>
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3">🛑 Stop & Direção</h3>
+          <label class="text-xs text-gray-400">Stop por trade (pontos)</label>
+          <input id="stopPts" type="number" step="0.25" value="12" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none"/>
+          <label class="text-xs text-gray-400 block mt-3">Direção</label>
+          <select id="direction" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none">
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </select>
+          <label class="text-xs text-gray-400 block mt-3">Preço de Entrada</label>
+          <input id="entry" type="number" step="0.25" value="20000" class="w-full mt-1 px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441] focus:outline-none"/>
+        </div>
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3">⚙️ Parciais</h3>
+          <label class="text-xs text-gray-400">Distribuição dos contratos</label>
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            <input id="pctP1" type="number" min="0" max="100" value="50" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+            <input id="pctP2" type="number" min="0" max="100" value="30" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+            <input id="pctP3" type="number" min="0" max="100" value="20" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">Soma = 100% (P1/P2/Final).</p>
+          <label class="text-xs text-gray-400 block mt-3">Níveis (em R)</label>
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            <input id="rP1" type="number" step="0.25" value="1.0" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+            <input id="rP2" type="number" step="0.25" value="1.5" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+            <input id="rP3" type="number" step="0.25" value="2.0" class="px-3 py-2 rounded text-white bg-[#1b2330] border border-[#2a3441]"/>
+          </div>
+        </div>
+        <div class="card p-4">
+          <h3 class="font-semibold mb-3">📏 Conversões (MNQ)</h3>
+          <div class="text-sm flex justify-between"><span>$ por ponto / contrato</span><strong id="usdPerPoint">$2.00</strong></div>
+          <div class="text-sm flex justify-between mt-1"><span>Stop em $</span><strong id="stopCash">$0</strong></div>
+          <div class="text-sm flex justify-between mt-1"><span>Risco do trade</span><strong id="tradeRisk">$0</strong></div>
+        </div>
+      </section>
+
+      <section class="card p-4 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold">🗂️ Plano de Execução</h3>
+          <div class="flex gap-2">
+            <button id="btnCalcular" class="px-3 py-2 rounded bg-cyanx/20 border border-cyanx/40 hover:bg-cyanx/30">Calcular</button>
+            <button id="btnExport" class="px-3 py-2 rounded bg-gradient-to-r from-cyanx/20 to-cyanx/30 border border-cyanx/50">📄 Exportar Plano</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-edge">
+              <tr>
+                <th class="text-left py-2">Etapa</th>
+                <th class="text-right py-2">R (x)</th>
+                <th class="text-right py-2">Pontos</th>
+                <th class="text-right py-2">Preço</th>
+                <th class="text-right py-2">Contratos</th>
+                <th class="text-right py-2">PnL Parcial</th>
+                <th class="text-right py-2">PnL Acumulado</th>
+                <th class="text-left py-2">Ação de Stop</th>
+              </tr>
+            </thead>
+            <tbody id="planBody"></tbody>
+          </table>
+        </div>
+        <div class="grid md:grid-cols-3 gap-4 mt-4">
+          <div class="bg-edge/50 rounded p-3"><div class="text-xs text-gray-400">Meta (pontos p/ contratos)</div><div class="text-lg font-bold" id="metaPtsVis">—</div><div class="text-xs text-gray-500">Ex.: 45pts com 2 contratos = $180</div></div>
+          <div class="bg-edge/50 rounded p-3"><div class="text-xs text-gray-400">PnL se carregar até a Meta</div><div class="text-lg font-bold text-good" id="metaCashVis">—</div></div>
+          <div class="bg-edge/50 rounded p-3"><div class="text-xs text-gray-400">PnL do plano de parciais</div><div class="text-lg font-bold" id="planoCashVis">—</div><div class="text-xs text-gray-500">Se menor que a meta, ajuste R3 ou %.</div></div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- Clássicos resumidos -->
+  <section class="grid md:grid-cols-2 grid-gap animate-slide-up">
+    <div id="chartEquity" class="card h-80"></div>
+    <div id="chartDaily" class="card h-80"></div>
+    <div id="chartMonthlyBars" class="card h-80 md:col-span-2"></div>
+  </section>
+
+  <section class="grid md:grid-cols-1 grid-gap animate-slide-up">
+    <div class="card p-4">
+      <h3 class="text-lg font-semibold mb-3 text-bad">⚠️ Top 5 Horários Críticos</h3>
+      <ul id="problemsList" class="list-disc list-inside space-y-1 text-gray-300"></ul>
+    </div>
+  </section>
+
+  <!-- Pivot + Trades -->
+  <section class="card p-4 overflow-x-auto animate-slide-up">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xl font-semibold">📋 Pivot por Grupo</h2>
+      <span id="groupLabel" class="chip">Agrupado por: instrumento</span>
+    </div>
+    <table class="w-full text-sm tbl">
+      <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+        <tr>
+          <th class="text-left">Grupo</th>
+          <th class="text-right">Trades</th>
+          <th class="text-right">P/L (€)</th>
+          <th class="text-right">Média (€)</th>
+          <th class="text-right">Win Rate</th>
+          <th class="text-right">%P/L+</th>
+          <th class="text-right">Melhor (€)</th>
+          <th class="text-right">Pior (€)</th>
+        </tr>
+      </thead>
+      <tbody id="pivotBody"></tbody>
+    </table>
+  </section>
+
+  <section class="card p-4 overflow-x-auto animate-slide-up">
+    <h2 class="text-xl font-semibold mb-3">📄 Todos os Trades</h2>
+    <table class="w-full text-sm tbl">
+      <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+        <tr>
+          <th>Data/Hora</th>
+          <th>Instrumento</th>
+          <th>Side</th>
+          <th>P/L (€)</th>
+          <th>Setup</th>
+          <th>Humor</th>
+          <th>Intensidade</th>
+        </tr>
+      </thead>
+      <tbody id="tradesTable"></tbody>
+    </table>
+  </section>
+
+  <!-- Histórico de Importações -->
+  <section class="card p-4 animate-slide-up">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold flex items-center gap-2">💾 Histórico de Importações</h2>
+      <button id="btnRefreshImports" class="px-3 py-1 rounded border border-edge hover:bg-card">🔄 Atualizar</button>
+    </div>
+    <div id="importsList" class="grid md:grid-cols-3 sm:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- Alerts flyout container -->
+  <div id="alertsFlyout" class="alerts-flyout hidden"></div>
+</div>

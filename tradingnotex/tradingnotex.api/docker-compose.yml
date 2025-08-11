@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  tradingnotex-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: tradingnotex-api
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80;http://+:8080
+      - MongoDbSettings__ConnectionString=mongodb+srv://admin:O9km3laNa3eQsYeJ@cluster0.fbdwvqz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - MongoDbSettings__DatabaseName=TradingNoteX_Prod
+      - MongoDbSettings__TradesCollection=Trades
+      - MongoDbSettings__ImportsCollection=Imports
+      - MongoDbSettings__RiskSettingsCollection=RiskSettings
+      - MongoDbSettings__UsersCollection=Users
+    networks:
+      - tradingnotex-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+  mongo-express:
+    image: mongo-express:1.0.0-alpha
+    container_name: tradingnotex-mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=O9km3laNa3eQsYeJ
+      - ME_CONFIG_MONGODB_SERVER=cluster0.fbdwvqz.mongodb.net
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=O9km3laNa3eQsYeJ
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+    networks:
+      - tradingnotex-network
+    restart: unless-stopped
+
+networks:
+  tradingnotex-network:
+    driver: bridge

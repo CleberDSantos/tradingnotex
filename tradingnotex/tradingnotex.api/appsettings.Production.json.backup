@@ -1,0 +1,40 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "MongoDbSettings": {
+    "ConnectionString": "mongodb://tradingnotex_user:app_password123@mongo:27017/TradingNoteX_Prod",
+    "DatabaseName": "TradingNoteX_Prod",
+    "TradesCollection": "Trades",
+    "ImportsCollection": "Imports",
+    "RiskSettingsCollection": "RiskSettings",
+    "UsersCollection": "Users"
+  },
+  "AllowedHosts": "*",
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "/app/logs/tradingnotex-.txt",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 7
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,218 @@
+<div class="partials-container">
+  <h2>Plano de Parciais</h2>
+
+  <!-- Mensagem de erro -->
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Indicador de carregamento -->
+  <div *ngIf="loading" class="loading">Processando...</div>
+
+  <!-- Seção para gerar plano de parciais -->
+  <section class="form-section">
+    <h3>Gerar Plano de Parciais</h3>
+    <form (ngSubmit)="generatePartialPlan()" #planForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="stopPts">Stop (pontos):</label>
+          <input
+            type="number"
+            id="stopPts"
+            name="stopPts"
+            [(ngModel)]="partialPlanData.stopPts"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="contracts"># Contratos:</label>
+          <input
+            type="number"
+            id="contracts"
+            name="contracts"
+            [(ngModel)]="partialPlanData.contracts"
+            min="1"
+            max="10"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="direction">Direção:</label>
+          <select
+            id="direction"
+            name="direction"
+            [(ngModel)]="partialPlanData.direction"
+            class="form-control">
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="entry">Preço de Entrada:</label>
+          <input
+            type="number"
+            id="entry"
+            name="entry"
+            [(ngModel)]="partialPlanData.entry"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="r1">R1:</label>
+          <input
+            type="number"
+            id="r1"
+            name="r1"
+            [(ngModel)]="partialPlanData.r1"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="r2">R2:</label>
+          <input
+            type="number"
+            id="r2"
+            name="r2"
+            [(ngModel)]="partialPlanData.r2"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="r3">R3:</label>
+          <input
+            type="number"
+            id="r3"
+            name="r3"
+            [(ngModel)]="partialPlanData.r3"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="p1">P1 (%):</label>
+          <input
+            type="number"
+            id="p1"
+            name="p1"
+            [(ngModel)]="partialPlanData.p1"
+            min="0"
+            max="100"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="p2">P2 (%):</label>
+          <input
+            type="number"
+            id="p2"
+            name="p2"
+            [(ngModel)]="partialPlanData.p2"
+            min="0"
+            max="100"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="p3">P3 (%):</label>
+          <input
+            type="number"
+            id="p3"
+            name="p3"
+            [(ngModel)]="partialPlanData.p3"
+            min="0"
+            max="100"
+            required
+            class="form-control">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Gerar Plano
+      </button>
+    </form>
+  </section>
+
+  <!-- Resultado do plano de parciais -->
+  <section *ngIf="planResult" class="result-section">
+    <h3>Plano de Parciais Gerado</h3>
+    <pre>{{ planResult | json }}</pre>
+  </section>
+
+  <!-- Seção para otimizar parciais -->
+  <section class="form-section">
+    <h3>Otimizar Parciais</h3>
+    <form (ngSubmit)="optimizePartials()" #optimizeForm="ngForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="optStopPts">Stop (pontos):</label>
+          <input
+            type="number"
+            id="optStopPts"
+            name="optStopPts"
+            [(ngModel)]="optimizeData.stopPts"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="optContracts"># Contratos:</label>
+          <input
+            type="number"
+            id="optContracts"
+            name="optContracts"
+            [(ngModel)]="optimizeData.contracts"
+            min="1"
+            max="10"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="targetR">Alvo R:</label>
+          <input
+            type="number"
+            id="targetR"
+            name="targetR"
+            [(ngModel)]="optimizeData.targetR"
+            step="0.25"
+            required
+            class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="curvePreset">Preset de Curva:</label>
+          <input
+            type="text"
+            id="curvePreset"
+            name="curvePreset"
+            [(ngModel)]="optimizeData.curvePreset"
+            class="form-control">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Otimizar
+      </button>
+    </form>
+  </section>
+
+  <!-- Resultado da otimização -->
+  <section *ngIf="optimizeResult" class="result-section">
+    <h3>Resultado da Otimização</h3>
+    <pre>{{ optimizeResult | json }}</pre>
+  </section>
+</div>

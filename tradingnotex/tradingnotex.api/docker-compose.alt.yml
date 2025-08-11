@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  tradingnotex-api:
+    build: .
+    container_name: tradingnotex-api
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;http://+:8080
+      - MongoDbSettings__ConnectionString=mongodb://tradingnotex_user:app_password123@mongo:27017/TradingNoteX_Prod
+      - MongoDbSettings__DatabaseName=TradingNoteX_Prod
+      - MongoDbSettings__TradesCollection=Trades
+      - MongoDbSettings__ImportsCollection=Imports
+      - MongoDbSettings__RiskSettingsCollection=RiskSettings
+      - MongoDbSettings__UsersCollection=Users
+    depends_on:
+      - mongo
+    links:
+      - mongo:mongo
+    networks:
+      - tradingnotex-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+  mongo:
+    image: mongo:7.0
+    container_name: tradingnotex-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=secretpassword123
+      - MONGO_INITDB_DATABASE=TradingNoteX_Prod
+    networks:
+      - tradingnotex-network
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  tradingnotex-network:
+    driver: bridge

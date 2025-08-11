@@ -1,0 +1,64 @@
+<div class="dashboard-container">
+  <h2>Dashboard</h2>
+
+  <!-- Loading indicator -->
+  <div *ngIf="loading" class="loading">Carregando...</div>
+
+  <!-- KPIs Section -->
+  <section class="kpis-section">
+    <h3>KPIs</h3>
+    <div class="kpis-grid">
+      <div class="kpi-card">
+        <h4>Resultado Total</h4>
+        <p class="kpi-value">{{ kpis.totalPL || 0 | currency:'EUR' }}</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Win Rate</h4>
+        <p class="kpi-value">{{ kpis.winRate || 0 }}%</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Expectancy</h4>
+        <p class="kpi-value">{{ kpis.expectancy || 0 | currency:'EUR' }}</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Maior Ganho</h4>
+        <p class="kpi-value">{{ kpis.maxGain || 0 | currency:'EUR' }}</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Maior Perda</h4>
+        <p class="kpi-value">{{ kpis.maxLoss || 0 | currency:'EUR' }}</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Drawdown</h4>
+        <p class="kpi-value">{{ kpis.drawdown || 0 | currency:'EUR' }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trades Section -->
+  <section class="trades-section">
+    <h3>Últimos Trades</h3>
+    <table class="trades-table">
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Instrumento</th>
+          <th>Side</th>
+          <th>P/L (€)</th>
+          <th>Setup</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let trade of trades">
+          <td>{{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ trade.instrument }}</td>
+          <td>{{ trade.side }}</td>
+          <td [ngClass]="{'profit': trade.realizedPLEUR > 0, 'loss': trade.realizedPLEUR < 0}">
+            {{ trade.realizedPLEUR | currency:'EUR' }}
+          </td>
+          <td>{{ trade.setup }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

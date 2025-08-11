@@ -1,0 +1,33 @@
+.navigation {
+  background-color: #343a40;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.nav-list {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  gap: 1rem;
+}
+
+.nav-item {
+  margin: 0;
+}
+
+.nav-link {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+  background-color: #495057;
+}
+
+.nav-link.active {
+  background-color: #007bff;
+}

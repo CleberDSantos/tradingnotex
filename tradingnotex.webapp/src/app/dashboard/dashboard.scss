@@ -1,0 +1,59 @@
+.dashboard-container {
+  padding: 2rem;
+}
+
+.kpis-section {
+  margin-bottom: 2rem;
+}
+
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.kpi-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.profit {
+  color: green;
+}
+
+.loss {
+  color: red;
+}
+
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.trades-table th,
+.trades-table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.trades-table th {
+  background-color: #f2f2f2;
+}
+
+.loading {
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 2rem 0;
+}
