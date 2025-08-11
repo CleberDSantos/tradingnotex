@@ -10,7 +10,15 @@ import { NgIf, NgFor, NgClass, JsonPipe, CurrencyPipe, DatePipe } from '@angular
   styleUrl: './risk.scss'
 })
 export class RiskComponent {
-  @Input() riskData: any;
+  @Input() riskData: any = {
+    goalEUR: 2.00,
+    maxLossEUR: 2.00,
+    selectedDay: '',
+    impact: 0,
+    greedDays: 0,
+    lossDays: 0,
+    compliantDays: 0
+  };
   @Input() trades: any[] = [];
   dayRiskData = {
     day: '',
