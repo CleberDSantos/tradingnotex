@@ -640,4 +640,10 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
         return 'text-cyanx';
     }
   }
+
+  // Math utility functions for template usage
+  getHeatmapOpacity(pl: number): string {
+    const opacity = Math.min(Math.abs(pl) / 10, 1);
+    return pl >= 0 ? `rgba(16, 185, 129, ${opacity})` : `rgba(239, 68, 68, ${opacity})`;
+  }
 }

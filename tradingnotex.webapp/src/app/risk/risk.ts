@@ -31,12 +31,12 @@ export class Risk {
   constructor(private riskService: RiskService) {
     // Definir data padrão como hoje
     this.dayRiskData.day = new Date().toISOString().split('T')[0];
-    
+
     // Definir range padrão como última semana
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
-    
+
     this.rangeRiskData.end = endDate.toISOString().split('T')[0];
     this.rangeRiskData.start = startDate.toISOString().split('T')[0];
   }
@@ -105,5 +105,21 @@ export class Risk {
 
   formatDateTime(dateString: string): string {
     return new Date(dateString).toLocaleString('pt-PT');
+  }
+
+  // Métodos para calcular estatísticas de risco
+  getGreedDaysCount(): number {
+    if (!this.rangeRiskResult?.results) return 0;
+    return this.rangeRiskResult.results.filter((r: any) => r.greed).length;
+  }
+
+  getLossBreachDaysCount(): number {
+    if (!this.rangeRiskResult?.results) return 0;
+    return this.rangeRiskResult.results.filter((r: any) => r.lossBreach).length;
+  }
+
+  getDisciplinedDaysCount(): number {
+    if (!this.rangeRiskResult?.results) return 0;
+    return this.rangeRiskResult.results.filter((r: any) => !r.greed && !r.lossBreach).length;
   }
 }

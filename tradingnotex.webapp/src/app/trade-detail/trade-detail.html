@@ -50,15 +50,15 @@
         <div>
           <div class="text-xs text-gray-400 mb-1">P/L (€)</div>
           <div class="text-3xl font-bold"
-               [ngClass]="trade.realizedPLEUR >= 0 ? 'text-good' : 'text-bad'">
-            {{ trade.realizedPLEUR >= 0 ? '+' : '' }}{{ trade.realizedPLEUR | number:'1.2-2' }}
+               [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'text-good' : 'text-bad'">
+            {{ (trade.realizedPLEUR || 0) >= 0 ? '+' : '' }}{{ (trade.realizedPLEUR || 0) | number:'1.2-2' }}
           </div>
         </div>
         <div>
           <div class="text-xs text-gray-400 mb-1">Status</div>
           <div class="emotion-badge"
-               [ngClass]="trade.realizedPLEUR >= 0 ? 'bg-gradient-to-r from-good/20 to-good/30 text-good' : 'bg-gradient-to-r from-bad/20 to-bad/30 text-bad'">
-            {{ trade.realizedPLEUR >= 0 ? '🏆 Vencedor' : '📉 Perdedor' }}
+               [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'bg-gradient-to-r from-good/20 to-good/30 text-good' : 'bg-gradient-to-r from-bad/20 to-bad/30 text-bad'">
+            {{ (trade.realizedPLEUR || 0) >= 0 ? '🏆 Vencedor' : '📉 Perdedor' }}
           </div>
         </div>
       </div>

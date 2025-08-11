@@ -28,29 +28,29 @@
     <div class="grid md:grid-cols-5 gap-3">
       <div>
         <label class="text-xs muted block mb-1">Instrumento</label>
-        <input 
+        <input
           [(ngModel)]="filters.instrument"
-          type="text" 
-          placeholder="ex: TECH100" 
+          type="text"
+          placeholder="ex: TECH100"
           class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
       <div>
         <label class="text-xs muted block mb-1">Data Início</label>
-        <input 
+        <input
           [(ngModel)]="filters.startDate"
-          type="date" 
+          type="date"
           class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
       <div>
         <label class="text-xs muted block mb-1">Data Fim</label>
-        <input 
+        <input
           [(ngModel)]="filters.endDate"
-          type="date" 
+          type="date"
           class="w-full bg-blacker border border-edge rounded px-3 py-2">
       </div>
       <div>
         <label class="text-xs muted block mb-1">Agrupar por</label>
-        <select 
+        <select
           [(ngModel)]="filters.groupBy"
           class="w-full bg-blacker border border-edge rounded px-3 py-2">
           <option value="instrument">Instrumento</option>
@@ -62,12 +62,12 @@
         </select>
       </div>
       <div class="flex gap-2 items-end">
-        <button 
+        <button
           (click)="applyFilters()"
           class="px-4 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">
           ✅ Aplicar
         </button>
-        <button 
+        <button
           (click)="clearFilters()"
           class="px-4 py-2 rounded border border-edge hover:bg-card">
           ❌ Limpar
@@ -83,31 +83,31 @@
       <div class="text-xs muted">Resultado Total</div>
       <div class="v" [ngClass]="getKPIClass(kpis.totalPL, 'pl')">{{ formatCurrency(kpis.totalPL) }}</div>
     </div>
-    
+
     <div class="card kpi text-cyanx">
       <div class="text-2xl mb-2">📊</div>
       <div class="text-xs muted">Win Rate</div>
       <div class="v text-cyanx">{{ formatPercentage(kpis.winRate) }}</div>
     </div>
-    
+
     <div class="card kpi text-accent">
       <div class="text-2xl mb-2">📈</div>
       <div class="text-xs muted">Expectancy</div>
       <div class="v text-accent">{{ formatCurrency(kpis.expectancy) }}</div>
     </div>
-    
+
     <div class="card kpi text-good">
       <div class="text-2xl mb-2">🚀</div>
       <div class="text-xs muted">Maior Ganho</div>
       <div class="v text-good">{{ formatCurrency(kpis.maxGain) }}</div>
     </div>
-    
+
     <div class="card kpi text-bad">
       <div class="text-2xl mb-2">⚠️</div>
       <div class="text-xs muted">Maior Perda</div>
       <div class="v text-bad">{{ formatCurrency(kpis.maxLoss) }}</div>
     </div>
-    
+
     <div class="card kpi text-accent">
       <div class="text-2xl mb-2">📉</div>
       <div class="text-xs muted">Drawdown</div>
@@ -136,9 +136,9 @@
       Pior horário: {{ heatmapData.worstHour.hour }}h ({{ formatCurrency(heatmapData.worstHour.pl) }})
     </div>
     <div class="grid grid-cols-24 gap-1">
-      <div *ngFor="let hour of heatmapData.heatmap" 
+      <div *ngFor="let hour of heatmapData.heatmap"
            class="h-8 rounded text-xs flex items-center justify-center"
-           [style.background-color]="hour.pl >= 0 ? 'rgba(16, 185, 129, ' + Math.min(Math.abs(hour.pl) / 10, 1) + ')' : 'rgba(239, 68, 68, ' + Math.min(Math.abs(hour.pl) / 10, 1) + ')'"
+           [style.background-color]="getHeatmapOpacity(hour.pl)"
            [title]="hour.hour + 'h: ' + formatCurrency(hour.pl)">
         {{ hour.hour }}
       </div>
@@ -163,12 +163,12 @@
           <td>{{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}</td>
           <td class="font-semibold">{{ trade.instrument }}</td>
           <td>
-            <span class="chip" 
+            <span class="chip"
                   [ngClass]="trade.side === 'buy' ? 'bg-good/20' : 'bg-bad/20'">
               {{ trade.side === 'buy' ? '📈' : '📉' }} {{ trade.side }}
             </span>
           </td>
-          <td class="text-right font-bold" 
+          <td class="text-right font-bold"
               [ngClass]="getTradeProfitClass(trade.realizedPLEUR || 0)">
             {{ formatCurrency(trade.realizedPLEUR || 0) }}
           </td>

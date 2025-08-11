@@ -165,21 +165,21 @@
       <div class="bg-edge/50 rounded p-4">
         <div class="text-xs text-gray-400">Dias com Ganância</div>
         <div class="text-xl font-bold text-accent">
-          {{ (rangeRiskResult.results?.filter(r => r.greed) || []).length }}
+          {{ getGreedDaysCount() }}
         </div>
       </div>
 
       <div class="bg-edge/50 rounded p-4">
         <div class="text-xs text-gray-400">Dias com Loss Quebrado</div>
         <div class="text-xl font-bold text-bad">
-          {{ (rangeRiskResult.results?.filter(r => r.lossBreach) || []).length }}
+          {{ getLossBreachDaysCount() }}
         </div>
       </div>
 
       <div class="bg-edge/50 rounded p-4">
         <div class="text-xs text-gray-400">Dias Disciplinados</div>
         <div class="text-xl font-bold text-good">
-          {{ (rangeRiskResult.results?.filter(r => !r.greed && !r.lossBreach) || []).length }}
+          {{ getDisciplinedDaysCount() }}
         </div>
       </div>
     </div>

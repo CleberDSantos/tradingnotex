@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { PartialsService, PartialPlanRequest } from '../services/partials.service';
 import { FormsModule } from '@angular/forms';
-import { NgIf, JsonPipe, NgFor } from '@angular/common';
+import { NgIf, JsonPipe, NgFor, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-partials',
-  imports: [FormsModule, NgIf, JsonPipe, NgFor],
+  imports: [FormsModule, NgIf, JsonPipe, NgFor, NgClass],
   templateUrl: './partials.html',
   styleUrl: './partials.scss'
 })
@@ -76,7 +76,7 @@ export class Partials {
 
   exportPlan() {
     if (!this.planResult) return;
-    
+
     const blob = new Blob([JSON.stringify(this.planResult, null, 2)], {
       type: 'application/json'
     });
