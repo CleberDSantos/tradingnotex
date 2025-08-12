@@ -11,6 +11,7 @@ using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
 using TradingNoteX.Models.Settings;
 using TradingNoteX.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace TradingNoteX.Services.Implementations
 {
@@ -20,7 +21,10 @@ namespace TradingNoteX.Services.Implementations
         private readonly IAIAnalysisService _aiAnalysisService;
         private readonly ILogger<TradeService> _logger;
 
-        public TradeService(IOptions<MongoDbSettings> settings, IAIAnalysisService aiAnalysisService, ILogger<TradeService> logger)
+        public TradeService(
+            IOptions<MongoDbSettings> settings,
+            IAIAnalysisService aiAnalysisService,
+            ILogger<TradeService> logger)
         {
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
@@ -29,21 +33,122 @@ namespace TradingNoteX.Services.Implementations
             _logger = logger;
         }
 
-        // Métodos existentes (manter os implementados anteriormente)
+        public async Task<Trade> UpdateTradeDetailsAsync(string tradeId, string userId, UpdateTradeDetailsRequest request)
+        {
+            var filter = Builders<Trade>.Filter.And(
+                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
+            );
+
+            var update = Builders<Trade>.Update;
+            var updates = new List<UpdateDefinition<Trade>>();
+
+            // Atualizar preços e níveis
+            if (request.OpenPrice.HasValue)
+                updates.Add(update.Set(t => t.OpenPrice, request.OpenPrice.Value));
+
+            if (request.ExecPrice.HasValue)
+                updates.Add(update.Set(t => t.ExecPrice, request.ExecPrice.Value));
+
+            if (request.StopPrice.HasValue)
+                updates.Add(update.Set(t => t.StopPrice, request.StopPrice.Value));
+
+            if (request.TargetPrice.HasValue)
+                updates.Add(update.Set(t => t.TargetPrice, request.TargetPrice.Value));
+
+            if (request.Spread.HasValue)
+                updates.Add(update.Set(t => t.Spread, request.Spread.Value));
+
+            if (request.OtherFees.HasValue)
+                updates.Add(update.Set(t => t.OtherFees, request.OtherFees.Value));
+
+            // Atualizar comportamento
+            if (request.EntryType.HasValue)
+                updates.Add(update.Set(t => t.EntryType, request.EntryType.Value));
+
+            if (request.Greed.HasValue)
+                updates.Add(update.Set(t => t.Greed, request.Greed.Value));
+
+            if (request.YoutubeLink != null)
+                updates.Add(update.Set(t => t.YoutubeLink, request.YoutubeLink));
+
+            // Atualizar status
+            if (request.DailyGoalReached.HasValue)
+                updates.Add(update.Set(t => t.DailyGoalReached, request.DailyGoalReached.Value));
+
+            if (request.DailyLossReached.HasValue)
+                updates.Add(update.Set(t => t.DailyLossReached, request.DailyLossReached.Value));
+
+            if (!string.IsNullOrEmpty(request.TradeStatus))
+                updates.Add(update.Set(t => t.TradeStatus, request.TradeStatus));
+
+            // Calcular e atualizar status do trade baseado nas regras
+            var trade = await GetTradeByIdAsync(tradeId, userId);
+            if (trade != null)
+            {
+                var calculatedStatus = CalculateTradeStatus(trade, request);
+                updates.Add(update.Set(t => t.TradeStatus, calculatedStatus));
+            }
+
+            updates.Add(update.Set(t => t.UpdatedAt, DateTime.UtcNow));
+
+            if (updates.Any())
+            {
+                await _trades.UpdateOneAsync(filter, update.Combine(updates));
+            }
+
+            return await GetTradeByIdAsync(tradeId, userId);
+        }
+
+        private string CalculateTradeStatus(Trade trade, UpdateTradeDetailsRequest request)
+        {
+            var execPrice = request.ExecPrice ?? trade.ExecPrice ?? 0;
+            var targetPrice = request.TargetPrice ?? trade.TargetPrice ?? 0;
+            var pl = trade.RealizedPLEUR;
+
+            // Regras de status conforme o código JavaScript
+            if (execPrice > 0 && targetPrice > 0 && Math.Abs(execPrice - targetPrice) < 0.01m)
+            {
+                return "winner"; // Atingiu o alvo
+            }
+
+            if (execPrice < targetPrice && pl > 0)
+            {
+                return "protection"; // Proteção
+            }
+
+            return pl >= 0 ? "winner" : "loser";
+        }
+
+        public async Task<Trade> CreateTradeAsync(Trade trade, string userId)
+        {
+            trade.OwnerId = userId;
+            trade.CreatedAt = DateTime.UtcNow;
+            trade.UpdatedAt = DateTime.UtcNow;
+
+            // Calcular status inicial
+            trade.TradeStatus = trade.RealizedPLEUR >= 0 ? "winner" : "loser";
+
+            trade.ACL = new Dictionary<string, ACLPermission>
+            {
+                { userId, new ACLPermission { Read = true, Write = true } }
+            };
+
+            await _trades.InsertOneAsync(trade);
+            return trade;
+        }
+
         public async Task<List<Trade>> GetTradesAsync(string userId, TradeFilterRequest filter)
         {
-            // Implementação existente...
             var filterBuilder = Builders<Trade>.Filter;
-            //var filters = new List<FilterDefinition<Trade>>
-            //{
-            //    filterBuilder.Eq(t => t.OwnerId, userId)
-            //}
-
-            var filters = new List<FilterDefinition<Trade>>();
+            var filters = new List<FilterDefinition<Trade>>
+            {
+                filterBuilder.Eq(t => t.OwnerId, userId)
+            };
 
             if (!string.IsNullOrEmpty(filter.Instrument) &&
-     filter.Instrument.Trim() != "" &&
-     filter.Instrument.ToUpper() != "ALL")
+                filter.Instrument.Trim() != "" &&
+                filter.Instrument.ToUpper() != "ALL")
             {
                 filters.Add(filterBuilder.Eq(t => t.Instrument, filter.Instrument));
             }
@@ -52,32 +157,19 @@ namespace TradingNoteX.Services.Implementations
             {
                 filters.Add(filterBuilder.Gte(t => t.ExecutedAtUTC, filter.StartDate.Value));
             }
-            
+
             if (filter.EndDate.HasValue)
             {
                 filters.Add(filterBuilder.Lte(t => t.ExecutedAtUTC, filter.EndDate.Value));
             }
-            
+
             var combinedFilter = filterBuilder.And(filters);
-            
+
             var sortDirection = filter.OrderBy.StartsWith("-") ? -1 : 1;
             var sortField = filter.OrderBy.TrimStart('-');
-            var sort = Builders<Trade>.Sort.Ascending(sortField);
-            if (sortDirection == -1)
-            {
-                sort = Builders<Trade>.Sort.Descending(sortField);
-            }
-            
-
-            if(filters.Count == 0)
-            {
-                combinedFilter = filterBuilder.Eq(t => t.Instrument, "TECH100");
-            }
-            else
-            {
-                filters.Add(filterBuilder.Eq(t => t.OwnerId, userId));
-                combinedFilter = filterBuilder.And(filters);
-            }   
+            var sort = sortDirection == -1
+                ? Builders<Trade>.Sort.Descending(sortField)
+                : Builders<Trade>.Sort.Ascending(sortField);
 
             return await _trades.Find(combinedFilter)
                 .Sort(sort)
@@ -85,92 +177,77 @@ namespace TradingNoteX.Services.Implementations
                 .Limit(filter.Limit)
                 .ToListAsync();
         }
-        
+
         public async Task<Trade> GetTradeByIdAsync(string tradeId, string userId)
         {
             var filter = Builders<Trade>.Filter.And(
-                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId)
+                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
             );
-            
+
             return await _trades.Find(filter).FirstOrDefaultAsync();
         }
-        
-        public async Task<Trade> CreateTradeAsync(Trade trade, string userId)
-        {
-            trade.OwnerId = userId;
-            trade.CreatedAt = DateTime.UtcNow;
-            trade.UpdatedAt = DateTime.UtcNow;
-            
-            trade.ACL = new Dictionary<string, ACLPermission>
-            {
-                { userId, new ACLPermission { Read = true, Write = true } }
-            };
-            
-            await _trades.InsertOneAsync(trade);
-            return trade;
-        }
-        
+
         public async Task<Trade> UpdateTradeAsync(string tradeId, Trade trade, string userId)
         {
             var filter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
                 Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
             );
-            
+
             trade.ObjectId = tradeId;
             trade.OwnerId = userId;
             trade.UpdatedAt = DateTime.UtcNow;
-            
+
             await _trades.ReplaceOneAsync(filter, trade);
             return trade;
         }
-        
+
         public async Task<bool> DeleteTradeAsync(string tradeId, string userId)
         {
             var filter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
                 Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
             );
-            
+
             var result = await _trades.DeleteOneAsync(filter);
             return result.DeletedCount > 0;
         }
-        
+
         public async Task<KPIsResponse> GetKPIsAsync(string userId, DateTime? startDate, DateTime? endDate)
         {
-            // Implementação existente...
             var filter = Builders<Trade>.Filter.Eq(t => t.OwnerId, userId);
-            
+
             if (startDate.HasValue)
             {
                 filter = Builders<Trade>.Filter.And(filter,
                     Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, startDate.Value));
             }
-            
+
             if (endDate.HasValue)
             {
                 filter = Builders<Trade>.Filter.And(filter,
                     Builders<Trade>.Filter.Lte(t => t.ExecutedAtUTC, endDate.Value));
             }
-            
+
             var trades = await _trades.Find(filter).ToListAsync();
-            
+
             if (!trades.Any())
             {
                 return new KPIsResponse();
             }
-            
+
             var totalPL = trades.Sum(t => t.RealizedPLEUR);
             var wins = trades.Count(t => t.RealizedPLEUR > 0);
             var winRate = (decimal)wins / trades.Count * 100;
             var expectancy = totalPL / trades.Count;
             var maxGain = trades.Max(t => t.RealizedPLEUR);
             var maxLoss = trades.Min(t => t.RealizedPLEUR);
-            
+
             decimal cumulative = 0;
             decimal peak = 0;
             decimal maxDrawdown = 0;
-            
+
             foreach (var trade in trades.OrderBy(t => t.ExecutedAtUTC))
             {
                 cumulative += trade.RealizedPLEUR;
@@ -178,7 +255,7 @@ namespace TradingNoteX.Services.Implementations
                 var currentDrawdown = peak - cumulative;
                 if (currentDrawdown > maxDrawdown) maxDrawdown = currentDrawdown;
             }
-            
+
             return new KPIsResponse
             {
                 TotalPL = Math.Round(totalPL, 2),
@@ -190,23 +267,22 @@ namespace TradingNoteX.Services.Implementations
                 TotalTrades = trades.Count
             };
         }
-        
+
         public async Task<HourlyHeatmapResponse> GetHourlyHeatmapAsync(string userId)
         {
-            // Implementação existente...
             var filter = Builders<Trade>.Filter.Eq(t => t.OwnerId, userId);
             var trades = await _trades.Find(filter).ToListAsync();
-            
+
             var hourlyData = new decimal[24];
             var hourlyCounts = new int[24];
-            
+
             foreach (var trade in trades)
             {
                 var hour = trade.ExecutedAtUTC.Hour;
                 hourlyData[hour] += trade.RealizedPLEUR;
                 hourlyCounts[hour]++;
             }
-            
+
             var heatmap = new List<HourData>();
             for (int h = 0; h < 24; h++)
             {
@@ -215,50 +291,49 @@ namespace TradingNoteX.Services.Implementations
                     Hour = h,
                     PL = Math.Round(hourlyData[h], 2),
                     Trades = hourlyCounts[h],
-                    AvgPL = hourlyCounts[h] > 0 
-                        ? Math.Round(hourlyData[h] / hourlyCounts[h], 2) 
+                    AvgPL = hourlyCounts[h] > 0
+                        ? Math.Round(hourlyData[h] / hourlyCounts[h], 2)
                         : 0
                 });
             }
-            
+
             var sorted = heatmap.OrderByDescending(h => h.PL).ToList();
-            
+
             return new HourlyHeatmapResponse
             {
                 Heatmap = heatmap,
-                BestHour = sorted.First(),
-                WorstHour = sorted.Last()
+                BestHour = sorted.FirstOrDefault(),
+                WorstHour = sorted.LastOrDefault()
             };
         }
-        
+
         public async Task<List<string>> GetInsightsAsync(string userId)
         {
-            // Implementação existente...
             var kpis = await GetKPIsAsync(userId, null, null);
             var heatmap = await GetHourlyHeatmapAsync(userId);
-            
+
             var insights = new List<string>();
-            
+
             if (kpis.TotalTrades > 0)
             {
                 insights.Add($"📊 Você fez {kpis.TotalTrades} trades com resultado líquido de €{kpis.TotalPL} " +
                     $"(Win Rate: {kpis.WinRate}%, Expectancy: €{kpis.Expectancy})");
             }
-            
+
             if (heatmap.BestHour != null && heatmap.WorstHour != null)
             {
                 insights.Add($"⏰ Melhor horário: {heatmap.BestHour.Hour}h (€{heatmap.BestHour.PL}). " +
                     $"Pior horário: {heatmap.WorstHour.Hour}h (€{heatmap.WorstHour.PL})");
-                
+
                 if (heatmap.WorstHour.PL < 0)
                 {
                     insights.Add($"⚠️ Evite operar às {heatmap.WorstHour.Hour}h — é onde mais perde no setup SMC");
                 }
             }
-            
+
             insights.Add("💡 Dica SMC: Sempre aguarde o preço voltar ao Order Block antes de entrar");
             insights.Add("💡 No SMC, o melhor R:R vem das entradas em Premium/Discount zones");
-            
+
             if (kpis.WinRate > 60)
             {
                 insights.Add("✅ Excelente Win Rate! Seu domínio do SMC está evidente");
@@ -267,51 +342,17 @@ namespace TradingNoteX.Services.Implementations
             {
                 insights.Add("⚠️ Win Rate baixo. Revise seus critérios de entrada no setup SMC");
             }
-            
+
             if (kpis.Drawdown > Math.Abs(kpis.TotalPL * 0.5m))
             {
                 insights.Add($"⚠️ Drawdown alto (€{kpis.Drawdown}). Considere reduzir o risco por trade");
             }
-            
+
             return insights;
-        }
-        
-        // Novos métodos para Trading Detail
-        public async Task<Trade> UpdateTradeDetailsAsync(string tradeId, string userId, UpdateTradeDetailsRequest request)
-        {
-            var filter = Builders<Trade>.Filter.And(
-                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
-                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
-            );
-            
-            var update = Builders<Trade>.Update;
-            var updates = new List<UpdateDefinition<Trade>>();
-            
-            if (request.EntryType.HasValue)
-                updates.Add(update.Set(t => t.EntryType, request.EntryType.Value));
-            
-            if (request.Greed.HasValue)
-                updates.Add(update.Set(t => t.Greed, request.Greed.Value));
-            
-            if (request.YoutubeLink != null)
-                updates.Add(update.Set(t => t.YoutubeLink, request.YoutubeLink));
-            
-            if (request.DailyGoalReached.HasValue)
-                updates.Add(update.Set(t => t.DailyGoalReached, request.DailyGoalReached.Value));
-            
-            if (request.DailyLossReached.HasValue)
-                updates.Add(update.Set(t => t.DailyLossReached, request.DailyLossReached.Value));
-            
-            updates.Add(update.Set(t => t.UpdatedAt, DateTime.UtcNow));
-            
-            await _trades.UpdateOneAsync(filter, update.Combine(updates));
-            
-            return await GetTradeByIdAsync(tradeId, userId);
         }
 
         public async Task<Comment> AddCommentAsync(string tradeId, string userId, AddCommentRequest request)
         {
-            // Converter DTOs de attachments para entidades
             var attachments = new List<CommentAttachment>();
 
             if (request.Attachments != null && request.Attachments.Any())
@@ -346,7 +387,7 @@ namespace TradingNoteX.Services.Implementations
             {
                 Author = userId,
                 Text = request.Text,
-                Screenshot = request.Screenshot, // Mantido para compatibilidade
+                Screenshot = request.Screenshot,
                 Attachments = attachments,
                 CreatedAt = DateTime.UtcNow
             };
@@ -375,12 +416,10 @@ namespace TradingNoteX.Services.Implementations
             if (comment == null)
                 throw new KeyNotFoundException("Comentário não encontrado");
 
-            // Usar o serviço de IA para análise
             if (_aiAnalysisService != null)
             {
                 try
                 {
-                    // Gerar análise formatada com suporte a attachments
                     var aiResponse = await _aiAnalysisService.GenerateFormattedAnalysis(
                         comment.Text,
                         trade.Side,
@@ -391,15 +430,12 @@ namespace TradingNoteX.Services.Implementations
                         comment.Attachments
                     );
 
-                    // Salvar tanto o texto simples quanto a resposta formatada
                     comment.AiAnalysis = aiResponse.Text;
                     comment.AiAnalysisRendered = aiResponse;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Erro ao gerar análise de IA");
-
-                    // Fallback para análise local
                     comment.AiAnalysis = GenerateFallbackAnalysis(comment.Text, trade);
                     comment.AiAnalysisRendered = new AiAnalysisResponse
                     {
@@ -413,7 +449,6 @@ namespace TradingNoteX.Services.Implementations
             }
             else
             {
-                // Fallback se o serviço de IA não estiver disponível
                 comment.AiAnalysis = GenerateFallbackAnalysis(comment.Text, trade);
                 comment.AiAnalysisRendered = new AiAnalysisResponse
                 {
@@ -425,7 +460,6 @@ namespace TradingNoteX.Services.Implementations
                 };
             }
 
-            // Atualizar no banco de dados
             var filter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
                 Builders<Trade>.Filter.ElemMatch(t => t.Comments,
@@ -486,21 +520,21 @@ namespace TradingNoteX.Services.Implementations
         public async Task<List<Comment>> GetCommentsAsync(string tradeId, string userId)
         {
             var trade = await GetTradeByIdAsync(tradeId, userId);
-            return trade.Comments.OrderByDescending(c => c.CreatedAt).ToList();
+            return trade?.Comments?.OrderByDescending(c => c.CreatedAt).ToList() ?? new List<Comment>();
         }
-        
+
         public async Task<bool> DeleteCommentAsync(string tradeId, string userId, string commentId)
         {
             var filter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
                 Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
             );
-            
-            var update = Builders<Trade>.Update.PullFilter(t => t.Comments, 
+
+            var update = Builders<Trade>.Update.PullFilter(t => t.Comments,
                 Builders<Comment>.Filter.Eq(c => c.Id, commentId));
-            
+
             var result = await _trades.UpdateOneAsync(filter, update);
-            
+
             return result.ModifiedCount > 0;
         }
     }

@@ -6,7 +6,7 @@
       ← Voltar ao Dashboard
     </button>
     <h1 class="text-2xl font-bold">Detalhes do Trade</h1>
-    <button (click)="saveTradeDetails()" class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50">
+    <button (click)="saveTradeDetails()" class="save-button px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50">
       💾 Salvar Alterações
     </button>
   </header>
@@ -21,10 +21,11 @@
     {{ error }}
   </div>
 
-  <!-- Detalhes do Trade -->
+  <!-- SEÇÃO 1: Informações principais -->
   <section *ngIf="trade" class="card p-6 animate-slide-up">
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- Informações básicas -->
+    <div class="grid md:grid-cols-4 gap-6">
+
+      <!-- Coluna A: Básicos -->
       <div class="space-y-4">
         <div>
           <div class="text-xs text-gray-400 mb-1">Data/Hora</div>
@@ -45,51 +46,72 @@
         </div>
       </div>
 
-      <!-- P/L e Status -->
+      <!-- Coluna B: P/L e Status -->
       <div class="space-y-4">
         <div>
           <div class="text-xs text-gray-400 mb-1">P/L (€)</div>
           <div class="text-3xl font-bold"
                [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'text-good' : 'text-bad'">
-            {{ (trade.realizedPLEUR || 0) >= 0 ? '+' : '' }}{{ (trade.realizedPLEUR || 0) | number:'1.2-2' }}
+            {{ (trade.realizedPLEUR || 0) >= 0 ? '+' : '' }}{{ formatCurrency(trade.realizedPLEUR) }}
           </div>
         </div>
         <div>
           <div class="text-xs text-gray-400 mb-1">Status</div>
-          <div class="emotion-badge"
-               [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'bg-gradient-to-r from-good/20 to-good/30 text-good' : 'bg-gradient-to-r from-bad/20 to-bad/30 text-bad'">
-            {{ (trade.realizedPLEUR || 0) >= 0 ? '🏆 Vencedor' : '📉 Perdedor' }}
+          <div class="emotion-badge" [ngClass]="getStatusClass()">
+            {{ getStatusIcon() }} {{ getStatusText() }}
           </div>
         </div>
       </div>
 
-      <!-- Metas do dia -->
+      <!-- Coluna C: Novos campos de preços -->
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Preço de Abertura</div>
+            <div class="font-semibold">{{ formatCurrency(openPrice) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Preço de Execução</div>
+            <div class="font-semibold">{{ formatCurrency(execPrice) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Spread</div>
+            <div class="font-semibold">{{ spread !== null ? spread.toFixed(4) : '—' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Outras Taxas</div>
+            <div class="font-semibold">{{ formatCurrency(otherFees) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna D: Cartões de metas -->
       <div class="space-y-4">
-        <div class="p-4 rounded-lg bg-gradient-to-r from-good/10 to-transparent border border-good/30">
+        <div class="p-4 rounded-lg border" [ngClass]="trade.dailyGoalReached ? 'border-good/30' : 'border-accent/30'">
           <div class="text-xs text-gray-400 mb-2">Meta Diária</div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl">{{ trade.dailyGoalReached ? '🎯' : '😊' }}</span>
+            <span class="text-2xl">{{ trade.dailyGoalReached ? '💪' : '😊' }}</span>
             <div>
               <div class="font-semibold" [ngClass]="trade.dailyGoalReached ? 'text-good' : 'text-accent'">
                 {{ trade.dailyGoalReached ? 'Atingida!' : 'Não atingida' }}
               </div>
               <div class="text-xs text-gray-400">
-                {{ trade.dailyGoalReached ? 'Meta batida com sucesso' : 'Ainda em busca da meta' }}
+                {{ trade.dailyGoalReached ? 'Meta cumprida' : 'Ainda em busca da meta' }}
               </div>
             </div>
           </div>
         </div>
 
-        <div class="p-4 rounded-lg bg-gradient-to-r from-bad/10 to-transparent border border-bad/30">
+        <div class="p-4 rounded-lg border" [ngClass]="trade.dailyLossReached ? 'border-bad/30' : 'border-good/30'">
           <div class="text-xs text-gray-400 mb-2">Loss Diário</div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl">{{ trade.dailyLossReached ? '😰' : '✅' }}</span>
+            <span class="text-2xl">{{ trade.dailyLossReached ? '😰' : '🛡️' }}</span>
             <div>
               <div class="font-semibold" [ngClass]="trade.dailyLossReached ? 'text-bad' : 'text-good'">
-                {{ trade.dailyLossReached ? 'Atingido' : 'Controlado' }}
+                {{ trade.dailyLossReached ? 'Limite atingido' : 'Controlado' }}
               </div>
               <div class="text-xs text-gray-400">
-                {{ trade.dailyLossReached ? 'Loss máximo atingido' : 'Dentro do limite' }}
+                {{ trade.dailyLossReached ? 'Parar por hoje' : 'Dentro do limite' }}
               </div>
             </div>
           </div>
@@ -98,25 +120,63 @@
     </div>
   </section>
 
-  <!-- Classificações do Trade -->
-  <section *ngIf="trade" class="card p-6 animate-slide-up" style="animation-delay: 0.1s">
-    <h2 class="text-xl font-semibold mb-6">📊 Classificação do Trade</h2>
+  <!-- SEÇÃO 2: Abas -->
+  <section *ngIf="trade" class="card p-6 animate-slide-up" style="animation-delay: 0.06s">
+    <div class="tabs flex gap-6 border-b border-edge mb-6">
+      <button class="pb-2" [ngClass]="{'active': activeTab === 'tab-entrada'}"
+              (click)="switchTab('tab-entrada')">
+        Detalhes da entrada
+      </button>
+      <button class="pb-2" [ngClass]="{'active': activeTab === 'tab-comp'}"
+              (click)="switchTab('tab-comp')">
+        Comportamento
+      </button>
+      <button class="pb-2" [ngClass]="{'active': activeTab === 'tab-video'}"
+              (click)="switchTab('tab-video')">
+        Análise de vídeo
+      </button>
+    </div>
 
-    <div class="space-y-8">
-      <!-- Slider Impulso vs Operacional -->
+    <!-- TAB 1: Detalhes da entrada -->
+    <div *ngIf="activeTab === 'tab-entrada'" class="space-y-6">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Stop Loss</label>
+          <input [(ngModel)]="stopPrice" type="number" step="0.01"
+                 (ngModelChange)="onLevelsChange()"
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2 focus:border-cyanx focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Alvo</label>
+          <input [(ngModel)]="targetPrice" type="number" step="0.01"
+                 (ngModelChange)="onLevelsChange()"
+                 class="w-full bg-blacker border border-edge rounded px-3 py-2 focus:border-cyanx focus:outline-none">
+        </div>
+      </div>
+
+      <!-- Gráfico -->
+      <div>
+        <div class="text-xs text-gray-400 mb-2">Gráfico 15m — dados Alpha Vantage</div>
+        <div class="rounded-lg overflow-hidden border border-edge bg-[#0b1017]">
+          <canvas #avChart height="320"></canvas>
+        </div>
+        <div *ngIf="chartLoading" class="text-xs text-gray-400 mt-2">Carregando dados...</div>
+        <div *ngIf="chartError" class="text-xs text-bad mt-2">{{ chartError }}</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Comportamento -->
+    <div *ngIf="activeTab === 'tab-comp'" class="space-y-8">
       <div>
         <div class="flex justify-between items-center mb-3">
           <label class="font-medium">Tipo de Entrada</label>
-          <span class="px-3 py-1 rounded-full text-sm" [ngClass]="getEntryTypeClass()">
+          <span class="px-3 py-1 rounded-full bg-edge text-sm" [ngClass]="getEntryTypeClass()">
             {{ getEntryTypeLabel() }}
           </span>
         </div>
         <div class="relative">
-          <input type="range"
-                 [(ngModel)]="entryTypeValue"
-                 (change)="updateEntryType()"
-                 min="0" max="100"
-                 class="w-full slider-track">
+          <input type="range" [(ngModel)]="entryTypeValue" (ngModelChange)="updateEntryType()"
+                 min="0" max="100" class="w-full slider-track">
           <div class="flex justify-between text-xs text-gray-400 mt-2">
             <span>🔥 Impulso</span>
             <span>⚙️ Operacional</span>
@@ -124,7 +184,6 @@
         </div>
       </div>
 
-      <!-- Toggle Ganância -->
       <div>
         <div class="flex items-center justify-between">
           <div>
@@ -137,18 +196,12 @@
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- YouTube Embed -->
-  <section *ngIf="trade" class="card p-6 animate-slide-up" style="animation-delay: 0.15s">
-    <h2 class="text-xl font-semibold mb-4">🎥 Análise em Vídeo</h2>
-
-    <div class="space-y-4">
+    <!-- TAB 3: Análise de vídeo -->
+    <div *ngIf="activeTab === 'tab-video'" class="space-y-4">
       <div>
         <label class="block text-sm font-medium mb-2">Link do YouTube</label>
-        <input type="text"
-               [(ngModel)]="youtubeLink"
-               (change)="saveTradeDetails()"
+        <input type="text" [(ngModel)]="youtubeLink" (ngModelChange)="saveTradeDetails()"
                placeholder="https://www.youtube.com/watch?v=..."
                class="w-full bg-blacker border border-edge rounded px-4 py-2 focus:border-cyanx focus:outline-none">
       </div>
@@ -164,185 +217,183 @@
     </div>
   </section>
 
-  <!-- Área de Comentários -->
-<!-- Seção de Comentários Avançada - substituir a seção existente no trade-detail.html -->
+  <!-- SEÇÃO 3: Comentários e Análise -->
+  <section *ngIf="trade" class="card p-6 animate-slide-up" style="animation-delay: 0.12s">
+    <h2 class="text-xl font-semibold mb-4">💬 Comentários e Análise</h2>
 
-<section *ngIf="trade" class="card p-6 animate-slide-up" style="animation-delay: 0.2s">
-  <h2 class="text-xl font-semibold mb-4">💬 Comentários e Análise</h2>
-
-  <!-- Lista de comentários -->
-  <div class="space-y-4 mb-6 max-h-96 overflow-y-auto">
-    <div *ngFor="let comment of comments" class="flex gap-3 animate-slide-up">
-      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyanx to-accent flex items-center justify-center text-white font-bold">
-        U
-      </div>
-      <div class="flex-1">
-        <div class="comment-bubble">
-          <div class="font-semibold text-sm mb-1">Você</div>
-          <div class="text-sm" [innerHTML]="comment.text"></div>
-
-          <!-- Anexos do comentário -->
-          <div *ngIf="comment.attachments && comment.attachments.length > 0" class="mt-3 space-y-2">
-            <div *ngFor="let attachment of comment.attachments" class="attachment-preview">
-              <img *ngIf="attachment.type === 'image'"
-                   [src]="attachment.data"
-                   class="max-w-xs rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-                   (click)="openImageModal(attachment.data)"
-                   alt="Screenshot anexado">
-
-              <div *ngIf="attachment.type === 'file'" class="file-attachment">
-                <span class="text-xs text-gray-400">📎 {{ attachment.filename }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="text-xs text-gray-400 mt-2">{{ comment.createdAt | date:'short' }}</div>
-        </div>
-
-        <button *ngIf="!isCommentAnalyzed(comment)"
-                (click)="requestAIAnalysis(comment.id)"
-                class="text-xs text-cyanx hover:text-cyan-300 mt-2 ml-3 transition-colors">
-          🤖 Analisar com IA
-        </button>
-
-        <!-- Resposta da IA -->
-        <div *ngIf="comment.aiAnalysisRendered" class="mt-3 flex gap-3">
-          <div class="flex-1">
-            <div class="comment-bubble ai text-white bg-gradient-to-r from-blue-500 to-cyan-400">
-              <div class="font-semibold text-sm mb-1 flex items-center gap-2">
-                {{ comment.aiAnalysisRendered.author }}
-                <span class="text-xs bg-white/20 px-2 py-0.5 rounded">{{ comment.aiAnalysisRendered.badge }}</span>
-              </div>
-              <div class="text-sm" [innerHTML]="comment.aiAnalysisRendered.text"></div>
-              <div class="text-xs opacity-80 mt-2">{{ comment.aiAnalysisRendered.timestamp }}</div>
-            </div>
-          </div>
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white">
-            AI
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Input de novo comentário avançado -->
-  <div class="border-t border-edge pt-4">
-    <div class="comment-input-area">
-      <div class="flex gap-3">
+    <!-- Lista de comentários -->
+    <div class="space-y-4 mb-6 max-h-96 overflow-y-auto">
+      <div *ngFor="let comment of comments" class="flex gap-3 animate-slide-up">
         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyanx to-accent flex items-center justify-center text-white font-bold">
           U
         </div>
         <div class="flex-1">
-          <!-- Drop zone para arquivos -->
-          <div #fileDropZone
-               class="bg-blacker rounded-lg border-2 border-dashed transition-all duration-200"
-               [ngClass]="{
-                 'border-cyanx bg-cyanx/5': isDragOver,
-                 'border-edge': !isDragOver
-               }">
+          <div class="comment-bubble">
+            <div class="font-semibold text-sm mb-1">Você</div>
+            <div class="text-sm" [innerHTML]="comment.text"></div>
 
-            <!-- Área de preview de imagens coladas -->
-            <div *ngIf="pastedFiles.length > 0" class="p-3 border-b border-edge">
-              <div class="text-xs text-gray-400 mb-2">📎 Anexos:</div>
-              <div class="flex flex-wrap gap-2">
-                <div *ngFor="let pastedFile of pastedFiles; let i = index"
-                     class="relative group">
+            <!-- Anexos do comentário -->
+            <div *ngIf="comment.attachments && comment.attachments.length > 0" class="mt-3 space-y-2">
+              <div *ngFor="let attachment of comment.attachments" class="attachment-preview">
+                <img *ngIf="attachment.type === 'image'"
+                     [src]="attachment.data"
+                     class="max-w-xs rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                     (click)="openImageModal(attachment.data)"
+                     alt="Screenshot anexado">
 
-                  <!-- Preview de imagem -->
-                  <div *ngIf="pastedFile.type === 'image'" class="relative">
-                    <img [src]="pastedFile.preview"
-                         class="w-16 h-16 object-cover rounded-lg border border-edge">
-                    <button (click)="removePastedFile(i)"
-                            class="absolute -top-1 -right-1 w-5 h-5 bg-bad rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      ✕
-                    </button>
-                  </div>
+                <div *ngIf="attachment.type === 'file'" class="file-attachment">
+                  <span class="text-xs text-gray-400">📎 {{ attachment.filename }}</span>
+                </div>
+              </div>
+            </div>
 
-                  <!-- Preview de arquivo -->
-                  <div *ngIf="pastedFile.type === 'file'" class="relative">
-                    <div class="w-16 h-16 bg-gray-600 rounded-lg flex items-center justify-center">
-                      <span class="text-xs">📄</span>
+            <div class="text-xs text-gray-400 mt-2">{{ comment.createdAt | date:'short' }}</div>
+          </div>
+
+          <button *ngIf="!isCommentAnalyzed(comment)"
+                  (click)="requestAIAnalysis(comment.id)"
+                  class="text-xs text-cyanx hover:text-cyan-300 mt-2 ml-3 transition-colors">
+            🤖 Analisar com IA
+          </button>
+
+          <!-- Resposta da IA -->
+          <div *ngIf="comment.aiAnalysisRendered" class="mt-3 flex gap-3">
+            <div class="flex-1">
+              <div class="comment-bubble ai text-white bg-gradient-to-r from-blue-500 to-cyan-400">
+                <div class="font-semibold text-sm mb-1 flex items-center gap-2">
+                  {{ comment.aiAnalysisRendered.author }}
+                  <span class="text-xs bg-white/20 px-2 py-0.5 rounded">{{ comment.aiAnalysisRendered.badge }}</span>
+                </div>
+                <div class="text-sm" [innerHTML]="comment.aiAnalysisRendered.text"></div>
+                <div class="text-xs opacity-80 mt-2">{{ comment.aiAnalysisRendered.timestamp }}</div>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white">
+              AI
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input de novo comentário -->
+    <div class="border-t border-edge pt-4">
+      <div class="comment-input-area">
+        <div class="flex gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyanx to-accent flex items-center justify-center text-white font-bold">
+            U
+          </div>
+          <div class="flex-1">
+            <!-- Drop zone para arquivos -->
+            <div #fileDropZone
+                 class="bg-blacker rounded-lg border-2 border-dashed transition-all duration-200"
+                 [ngClass]="{
+                   'border-cyanx bg-cyanx/5': isDragOver,
+                   'border-edge': !isDragOver
+                 }">
+
+              <!-- Área de preview de imagens coladas -->
+              <div *ngIf="pastedFiles.length > 0" class="p-3 border-b border-edge">
+                <div class="text-xs text-gray-400 mb-2">📎 Anexos:</div>
+                <div class="flex flex-wrap gap-2">
+                  <div *ngFor="let pastedFile of pastedFiles; let i = index"
+                       class="relative group">
+
+                    <!-- Preview de imagem -->
+                    <div *ngIf="pastedFile.type === 'image'" class="relative">
+                      <img [src]="pastedFile.preview"
+                           class="w-16 h-16 object-cover rounded-lg border border-edge">
+                      <button (click)="removePastedFile(i)"
+                              class="absolute -top-1 -right-1 w-5 h-5 bg-bad rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                      </button>
                     </div>
-                    <button (click)="removePastedFile(i)"
-                            class="absolute -top-1 -right-1 w-5 h-5 bg-bad rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      ✕
-                    </button>
+
+                    <!-- Preview de arquivo -->
+                    <div *ngIf="pastedFile.type === 'file'" class="relative">
+                      <div class="w-16 h-16 bg-gray-600 rounded-lg flex items-center justify-center">
+                        <span class="text-xs">📄</span>
+                      </div>
+                      <button (click)="removePastedFile(i)"
+                              class="absolute -top-1 -right-1 w-5 h-5 bg-bad rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Textarea principal -->
-            <div class="p-3">
-              <textarea #commentTextarea
-                        [(ngModel)]="newCommentText"
-                        [placeholder]="getPlaceholderText()"
-                        class="w-full bg-transparent outline-none resize-none text-sm"
-                        rows="3"
-                        (keydown.ctrl.enter)="postComment()"></textarea>
+              <!-- Textarea principal -->
+              <div class="p-3">
+                <textarea #commentTextarea
+                          [(ngModel)]="newCommentText"
+                          [placeholder]="getPlaceholderText()"
+                          class="w-full bg-transparent outline-none resize-none text-sm"
+                          rows="3"
+                          (keydown.ctrl.enter)="postComment()"></textarea>
 
-              <!-- Barra de ferramentas -->
-              <div class="flex justify-between items-center mt-2">
-                <div class="flex gap-2 items-center">
-                  <!-- Botão de anexar arquivo tradicional -->
-                  <label class="cursor-pointer hover:bg-edge p-2 rounded transition group">
-                    📷
-                    <input type="file"
-                           accept="image/*"
-                           class="hidden"
-                           (change)="handleFileInput($event)">
-                  </label>
+                <!-- Barra de ferramentas -->
+                <div class="flex justify-between items-center mt-2">
+                  <div class="flex gap-2 items-center">
+                    <!-- Botão de anexar arquivo -->
+                    <label class="cursor-pointer hover:bg-edge p-2 rounded transition group">
+                      📷
+                      <input type="file"
+                             accept="image/*"
+                             class="hidden"
+                             (change)="handleFileInput($event)">
+                    </label>
 
-                  <!-- Dica de Ctrl+V -->
-                  <div class="text-xs text-gray-500 flex items-center gap-1" *ngIf="canPaste()">
-                    <span class="bg-edge px-2 py-1 rounded text-xs">Ctrl+V</span>
-                    <span>para colar imagem</span>
+                    <!-- Dica de Ctrl+V -->
+                    <div class="text-xs text-gray-500 flex items-center gap-1" *ngIf="canPaste()">
+                      <span class="bg-edge px-2 py-1 rounded text-xs">Ctrl+V</span>
+                      <span>para colar imagem</span>
+                    </div>
                   </div>
+
+                  <!-- Botão de enviar -->
+                  <button (click)="postComment()"
+                          [disabled]="isUploading || (!newCommentText.trim() && pastedFiles.length === 0)"
+                          class="px-4 py-1.5 bg-cyanx text-blacker rounded-full font-semibold text-sm hover:bg-cyan-300 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+
+                    <!-- Loading spinner -->
+                    <div *ngIf="isUploading" class="animate-spin w-4 h-4 border-2 border-blacker border-t-transparent rounded-full"></div>
+
+                    <span>{{ isUploading ? 'Enviando...' : 'Publicar' }}</span>
+
+                    <!-- Atalho -->
+                    <span class="text-xs opacity-70" *ngIf="!isUploading">Ctrl+Enter</span>
+                  </button>
                 </div>
-
-                <!-- Botão de enviar -->
-                <button (click)="postComment()"
-                        [disabled]="isUploading || (!newCommentText.trim() && pastedFiles.length === 0)"
-                        class="px-4 py-1.5 bg-cyanx text-blacker rounded-full font-semibold text-sm hover:bg-cyan-300 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-
-                  <!-- Loading spinner -->
-                  <div *ngIf="isUploading" class="animate-spin w-4 h-4 border-2 border-blacker border-t-transparent rounded-full"></div>
-
-                  <span>{{ isUploading ? 'Enviando...' : 'Publicar' }}</span>
-
-                  <!-- Atalho -->
-                  <span class="text-xs opacity-70" *ngIf="!isUploading">Ctrl+Enter</span>
-                </button>
               </div>
-            </div>
 
-            <!-- Zona de drop visual -->
-            <div *ngIf="isDragOver" class="absolute inset-0 bg-cyanx/10 border-2 border-cyanx rounded-lg flex items-center justify-center pointer-events-none">
-              <div class="text-cyanx font-semibold">
-                📂 Solte as imagens aqui
+              <!-- Zona de drop visual -->
+              <div *ngIf="isDragOver" class="absolute inset-0 bg-cyanx/10 border-2 border-cyanx rounded-lg flex items-center justify-center pointer-events-none">
+                <div class="text-cyanx font-semibold">
+                  📂 Solte as imagens aqui
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- Modal para visualizar imagens em tela cheia -->
-<div *ngIf="modalImageSrc"
-     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-     (click)="closeImageModal()">
-  <div class="relative max-w-4xl max-h-full p-4">
-    <img [src]="modalImageSrc"
-         class="max-w-full max-h-full object-contain rounded-lg"
-         (click)="$event.stopPropagation()">
-    <button (click)="closeImageModal()"
-            class="absolute top-2 right-2 w-8 h-8 bg-bad rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-colors">
-      ✕
-    </button>
+  <!-- Modal para visualizar imagens em tela cheia -->
+  <div *ngIf="modalImageSrc"
+       class="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+       (click)="closeImageModal()">
+    <div class="relative max-w-4xl max-h-full p-4">
+      <img [src]="modalImageSrc"
+           class="max-w-full max-h-full object-contain rounded-lg"
+           (click)="$event.stopPropagation()">
+      <button (click)="closeImageModal()"
+              class="absolute top-2 right-2 w-8 h-8 bg-bad rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+        ✕
+      </button>
+    </div>
   </div>
-</div>
 
   <!-- Indicador de digitação da IA -->
   <div *ngIf="showAITyping" class="card p-4 animate-slide-up">

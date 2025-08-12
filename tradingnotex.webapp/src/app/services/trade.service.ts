@@ -6,7 +6,7 @@ import { catchError, map } from 'rxjs/operators';
 
 export interface Trade {
   objectId?: string;
-  executedAtUTC?: string;
+  executedAtUTC: string;
   instrument?: string;
   side?: string;
   realizedPLEUR?: number;
@@ -17,7 +17,14 @@ export interface Trade {
   tags?: string[];
   importId?: string;
   ownerId?: string;
+  tradeStatus?: string;
   entryType?: number;
+  spread?: number | null;
+  otherFees?: number | null;
+  targetPrice?: number | null;
+  stopPrice?: number | null;
+  execPrice?: number | null;
+  openPrice?: number | null;
   greed?: boolean;
   youtubeLink?: string;
   comments?: any[];
