@@ -132,28 +132,171 @@
     </table>
   </section>
 
-  <!-- Todos os Trades -->
-  <section class="card p-4 overflow-x-auto animate-slide-up">
-    <h2 class="text-xl font-semibold mb-3">📋 Todos os Trades</h2>
-    <table class="w-full text-sm tbl">
-      <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
-        <tr>
-          <th>Data/Hora</th>
-          <th>Instrumento</th>
-          <th>Side</th>
-          <th>P/L (€)</th>
-          <th>Setup</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let trade of trades" class="hover:bg-edge/20">
-          <td>{{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}</td>
-          <td class="font-semibold">{{ trade.instrument }}</td>
-          <td><span class="chip" [ngClass]="trade.side==='buy'?'bg-good/20':'bg-bad/20'">{{ trade.side==='buy'?'📈':'📉' }} {{ trade.side }}</span></td>
-          <td [ngClass]="getTradeProfitClass(trade.realizedPLEUR)" class="font-bold">{{ trade.realizedPLEUR | number:'1.2-2' }}</td>
-          <td>{{ trade.setup }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+<!-- Seção de Todos os Trades com botão de detalhes -->
+<section class="card p-4 overflow-x-auto animate-slide-up">
+  <h2 class="text-xl font-semibold mb-3">📋 Todos os Trades</h2>
+  <table class="w-full text-sm tbl">
+    <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+      <tr>
+        <th class="text-center">Detalhes</th>
+        <th>Data/Hora</th>
+        <th>Instrumento</th>
+        <th>Side</th>
+        <th>P/L (€)</th>
+        <th>Setup</th>
+        <th class="text-center">Análise</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let trade of trades" class="hover:bg-edge/20 transition-all">
+        <!-- Botão de Detalhes -->
+        <td class="text-center">
+          <button
+            (click)="openTradeDetail(trade.objectId)"
+            class="p-2 rounded-lg bg-cyanx/10 hover:bg-cyanx/20 border border-cyanx/30 hover:border-cyanx/50 transition-all group"
+            title="Ver detalhes do trade">
+            <svg class="w-4 h-4 text-cyanx group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </button>
+        </td>
+
+        <!-- Data/Hora -->
+        <td class="font-mono text-xs">
+          {{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}
+        </td>
+
+        <!-- Instrumento -->
+        <td>
+          <span class="font-semibold text-cyanx">{{ trade.instrument }}</span>
+        </td>
+
+        <!-- Side -->
+        <td>
+          <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                [ngClass]="trade.side==='buy' ? 'bg-good/20 text-good' : 'bg-bad/20 text-bad'">
+            <span>{{ trade.side === 'buy' ? '📈' : '📉' }}</span>
+            <span>{{ trade.side | uppercase }}</span>
+          </span>
+        </td>
+
+        <!-- P/L -->
+        <td [ngClass]="getTradeProfitClass(trade.realizedPLEUR)" class="font-bold">
+          <span *ngIf="trade.realizedPLEUR >= 0">+</span>{{ trade.realizedPLEUR | number:'1.2-2' }}
+        </td>
+
+        <!-- Setup -->
+        <td>
+          <span class="chip bg-gradient-to-r from-accent/10 to-accent/20 text-accent text-xs">
+            {{ trade.setup }}
+          </span>
+        </td>
+
+        <!-- Indicadores de análise -->
+        <td class="text-center">
+          <div class="flex items-center justify-center gap-1">
+            <!-- Indicador de Meta Diária -->
+            <span *ngIf="trade.dailyGoalReached"
+                  class="text-good text-lg"
+                  title="Meta diária atingida">
+              🎯
+            </span>
+
+            <!-- Indicador de Loss Diário -->
+            <span *ngIf="trade.dailyLossReached"
+                  class="text-bad text-lg"
+                  title="Loss diário atingido">
+              ⚠️
+            </span>
+
+            <!-- Indicador de Ganância -->
+            <span *ngIf="trade.greed"
+                  class="text-accent text-lg"
+                  title="Ganância detectada">
+              💰
+            </span>
+
+            <!-- Indicador de Comentários -->
+            <span *ngIf="trade.comments && trade.comments.length > 0"
+                  class="text-cyanx text-sm"
+                  title="{{ trade.comments.length }} comentários">
+              💬 {{ trade.comments.length }}
+            </span>
+
+            <!-- Indicador de Vídeo -->
+            <span *ngIf="trade.youtubeLink"
+                  class="text-red-500 text-lg"
+                  title="Análise em vídeo disponível">
+              🎥
+            </span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Mensagem quando não há trades -->
+      <tr *ngIf="trades.length === 0">
+        <td colspan="7" class="text-center py-8 text-gray-400">
+          <div class="flex flex-col items-center gap-2">
+            <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p>Nenhum trade encontrado</p>
+            <p class="text-xs">Ajuste os filtros ou importe seus trades</p>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Paginação -->
+  <div class="flex items-center justify-between mt-4 pt-4 border-t border-edge">
+    <div class="text-sm text-gray-400">
+      Mostrando {{ trades.length }} de {{ kpis.totalTrades }} trades
+    </div>
+    <div class="flex gap-2">
+      <button
+        (click)="loadMoreTrades()"
+        [disabled]="loading || trades.length >= kpis.totalTrades"
+        class="px-4 py-2 rounded bg-edge hover:bg-card border border-edge transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+        Carregar mais
+      </button>
+    </div>
+  </div>
+</section>
+
+<style>
+/* Estilos adicionais para a tabela */
+.tbl tbody tr {
+  transition: all 0.2s ease;
+}
+
+.tbl tbody tr:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(34, 211, 238, 0.1);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Animação para os ícones de análise */
+.tbl tbody tr td:last-child span {
+  transition: transform 0.2s ease;
+}
+
+.tbl tbody tr:hover td:last-child span {
+  transform: scale(1.1);
+}
+
+/* Estilo do botão de detalhes */
+button:hover svg {
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.5));
+}
+</style>
 </div>

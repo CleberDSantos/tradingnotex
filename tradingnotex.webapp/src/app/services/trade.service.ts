@@ -48,6 +48,13 @@ export interface Comment {
   screenshot?: string;
   createdAt?: string;
   aiAnalysis?: string;
+  attachments?: Array<{
+    type: string;
+    data?: string;
+    filename?: string;
+    size?: number;
+    mimeType?: string;
+  }>;
 }
 
 @Injectable({
@@ -67,33 +74,33 @@ export class TradeService {
     Skip?: number
   }): Observable<{results: Trade[]}> {
     let httpParams = new HttpParams();
-    
+
     if (params) {
       if (params.Instrument && params.Instrument.trim() !== '' && params.Instrument !== 'ALL') {
         httpParams = httpParams.set('Instrument', params.Instrument);
       }
-      
+
       if (params.StartDate) {
         httpParams = httpParams.set('StartDate', params.StartDate.toISOString());
       }
-      
+
       if (params.EndDate) {
         httpParams = httpParams.set('EndDate', params.EndDate.toISOString());
       }
-      
+
       if (params.OrderBy) {
         httpParams = httpParams.set('OrderBy', params.OrderBy);
       }
-      
+
       if (params.Limit !== undefined) {
         httpParams = httpParams.set('Limit', params.Limit.toString());
       }
-      
+
       if (params.Skip !== undefined) {
         httpParams = httpParams.set('Skip', params.Skip.toString());
       }
     }
-    
+
     return this.http.get<{results: Trade[]}>(this.base, { params: httpParams })
       .pipe(
         catchError(error => {
@@ -123,7 +130,7 @@ export class TradeService {
     let params = new HttpParams();
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
-    
+
     return this.http.get<KPIsResponse>(`${this.base}/kpis`, { params })
       .pipe(
         catchError(error => {
@@ -178,7 +185,18 @@ export class TradeService {
       );
   }
 
-  addComment(objectId: string, payload: { text?: string; screenshot?: string }): Observable<Comment> {
+  importTrades(payload: { name?: string; statementDateISO?: string; trades?: any[] }): Observable<any> {
+    const url = environment.apiBaseUrl.replace(/\/+$/, '') + '/api/functions/importTrades';
+    return this.http.post<any>(url, payload)
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao importar trades:', error);
+          return of({ success: false, error: error });
+        })
+      );
+  }
+
+  addComment(objectId: string, payload: { text?: string; screenshot?: string; attachments?: any[] }): Observable<Comment> {
     return this.http.post<Comment>(`${this.base}/${encodeURIComponent(objectId)}/comments`, payload);
   }
 

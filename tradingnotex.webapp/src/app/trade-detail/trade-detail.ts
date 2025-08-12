@@ -1,9 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TradeService } from '../services/trade.service';
 import { FormsModule } from '@angular/forms';
 import { NgIf, NgFor, DatePipe, CommonModule } from '@angular/common';
+import { lastValueFrom } from 'rxjs';
 import { Trade, Comment } from '../services/trade.service';
+
+interface PastedFile {
+  file: File;
+  preview: string;
+  type: 'image' | 'file';
+}
 
 @Component({
   selector: 'app-trade-detail',
@@ -12,7 +19,10 @@ import { Trade, Comment } from '../services/trade.service';
   templateUrl: './trade-detail.html',
   styleUrl: './trade-detail.scss'
 })
-export class TradeDetail implements OnInit {
+export class TradeDetail implements OnInit, AfterViewInit {
+  @ViewChild('commentTextarea') commentTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('fileDropZone') fileDropZone!: ElementRef<HTMLDivElement>;
+
   trade: Trade | null = null;
   comments: Comment[] = [];
   loading = false;
@@ -23,8 +33,13 @@ export class TradeDetail implements OnInit {
   greedToggle = false;
   youtubeLink = '';
   newCommentText = '';
-  currentScreenshot: string | null = null;
   showAITyping = false;
+
+  // Controles avançados de anexos
+  pastedFiles: PastedFile[] = [];
+  isDragOver = false;
+  isUploading = false;
+  modalImageSrc: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -39,6 +54,183 @@ export class TradeDetail implements OnInit {
     }
   }
 
+  ngAfterViewInit() {
+    this.setupClipboardListeners();
+    this.setupDragAndDrop();
+  }
+
+  private setupClipboardListeners() {
+    document.addEventListener('paste', (e) => {
+      if (this.isCommentAreaFocused()) {
+        this.handlePaste(e);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'v' && this.isCommentAreaFocused()) {
+        // O evento paste será disparado automaticamente
+      }
+    });
+  }
+
+  private setupDragAndDrop() {
+    if (!this.fileDropZone) return;
+
+    const dropZone = this.fileDropZone.nativeElement;
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.isDragOver = true;
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      this.isDragOver = false;
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.isDragOver = false;
+      this.handleDrop(e);
+    });
+  }
+
+  private isCommentAreaFocused(): boolean {
+    const activeElement = document.activeElement;
+    return activeElement === this.commentTextarea?.nativeElement ||
+           activeElement?.closest('.comment-input-area') !== null;
+  }
+
+  private async handlePaste(e: ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await this.addPastedFile(file);
+        }
+      }
+    }
+  }
+
+  private async handleDrop(e: DragEvent) {
+    const files = e.dataTransfer?.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        await this.addPastedFile(file);
+      }
+    }
+  }
+
+  private async addPastedFile(file: File): Promise<void> {
+    try {
+      const preview = await this.createFilePreview(file);
+      const pastedFile: PastedFile = {
+        file,
+        preview,
+        type: file.type.startsWith('image/') ? 'image' : 'file'
+      };
+
+      this.pastedFiles.push(pastedFile);
+
+      setTimeout(() => {
+        this.commentTextarea?.nativeElement.focus();
+      }, 100);
+
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      this.error = 'Erro ao processar arquivo';
+    }
+  }
+
+  private createFilePreview(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  removePastedFile(index: number) {
+    this.pastedFiles.splice(index, 1);
+  }
+
+  async postComment() {
+    if (!this.trade || (!this.newCommentText.trim() && this.pastedFiles.length === 0)) {
+      return;
+    }
+
+    this.isUploading = true;
+
+    try {
+      const attachments = await Promise.all(
+        this.pastedFiles.map(async (pastedFile) => ({
+          type: pastedFile.type,
+          data: pastedFile.preview,
+          filename: pastedFile.file.name,
+          size: pastedFile.file.size,
+          mimeType: pastedFile.file.type
+        }))
+      );
+
+      const comment = await lastValueFrom(this.tradeService.addComment(this.trade.objectId!, {
+        text: this.newCommentText,
+        attachments: attachments
+      }));
+
+      this.comments.unshift(comment);
+      this.newCommentText = '';
+      this.pastedFiles = [];
+
+    } catch (error) {
+      console.error('Erro ao adicionar comentário:', error);
+      this.error = 'Erro ao adicionar comentário';
+    } finally {
+      this.isUploading = false;
+    }
+  }
+
+  canPaste(): boolean {
+    return navigator.clipboard !== undefined;
+  }
+
+  getPlaceholderText(): string {
+    if (this.canPaste()) {
+      return 'Digite seu comentário ou cole uma imagem com Ctrl+V...';
+    }
+    return 'Digite seu comentário...';
+  }
+
+  openImageModal(imageSrc?: string | null) {
+    if (!imageSrc) return;
+    this.modalImageSrc = imageSrc;
+  }
+
+  closeImageModal() {
+    this.modalImageSrc = null;
+  }
+
+  handleFileInput(event: any) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      this.addPastedFile(files[i]);
+    }
+
+    event.target.value = '';
+  }
+
+  // Métodos existentes mantidos...
   loadTradeDetails(tradeId: string) {
     this.loading = true;
     this.tradeService.get(tradeId).subscribe({
@@ -95,24 +287,6 @@ export class TradeDetail implements OnInit {
     });
   }
 
-  postComment() {
-    if (!this.trade || !this.newCommentText.trim()) return;
-
-    this.tradeService.addComment(this.trade.objectId!, {
-      text: this.newCommentText,
-      screenshot: this.currentScreenshot || undefined
-    }).subscribe({
-      next: (comment) => {
-        this.comments.unshift(comment);
-        this.newCommentText = '';
-        this.currentScreenshot = null;
-      },
-      error: (error) => {
-        this.error = 'Erro ao adicionar comentário';
-      }
-    });
-  }
-
   requestAIAnalysis(commentId: string) {
     if (!this.trade) return;
 
@@ -131,21 +305,6 @@ export class TradeDetail implements OnInit {
         this.showAITyping = false;
       }
     });
-  }
-
-  handleScreenshot(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      this.currentScreenshot = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  removeScreenshot() {
-    this.currentScreenshot = null;
   }
 
   getEntryTypeLabel(): string {

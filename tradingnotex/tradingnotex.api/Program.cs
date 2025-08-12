@@ -28,7 +28,8 @@ builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<IImportService, ImportService>();
 builder.Services.AddScoped<IRiskSettingsService, RiskSettingsService>();
 builder.Services.AddScoped<ICloudFunctionsService, CloudFunctionsService>();
-builder.Services.AddScoped<IAIAnalysisService, AIAnalysisService>(); // Novo serviço
+builder.Services.AddScoped<IAIAnalysisService, AIAnalysisService>(); 
+builder.Services.AddScoped<HttpClient, HttpClient>(); 
 
 // Add CORS
 builder.Services.AddCors(options =>

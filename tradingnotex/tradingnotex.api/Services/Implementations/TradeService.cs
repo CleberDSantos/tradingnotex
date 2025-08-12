@@ -84,8 +84,7 @@ namespace TradingNoteX.Services.Implementations
         public async Task<Trade> GetTradeByIdAsync(string tradeId, string userId)
         {
             var filter = Builders<Trade>.Filter.And(
-                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
-                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
+                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId)
             );
             
             return await _trades.Find(filter).FirstOrDefaultAsync();

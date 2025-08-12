@@ -37,6 +37,9 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   // Tabs
   activeTab = 'risk';
 
+  currentPage = 0;
+  pageSize = 20;
+
   // Alertas
   alerts: Alert[] = [];
   showAlerts = false;
@@ -162,6 +165,52 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  getTradeIcon(trade: any): string {
+    if (trade.realizedPLEUR > 5) return '🚀'; // Grande vitória
+    if (trade.realizedPLEUR > 0) return '✅'; // Vitória
+    if (trade.realizedPLEUR < -5) return '💥'; // Grande perda
+    if (trade.realizedPLEUR < 0) return '❌'; // Perda
+    return '➖'; // Break even
+  }
+
+  formatTradeDuration(minutes: number | null): string {
+    if (!minutes) return '-';
+
+    if (minutes < 60) {
+      return `${minutes}min`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      return `${days}d`;
+    }
+  }
+
+   getTradeStats(trade: any): any {
+    const stats = {
+      riskRewardRatio: 0,
+      percentageGain: 0,
+      isWinner: trade.realizedPLEUR > 0,
+      hasComments: trade.comments && trade.comments.length > 0,
+      hasAnalysis: trade.comments?.some((c: any) => c.aiAnalysis),
+      hasVideo: !!trade.youtubeLink
+    };
+
+    // Calcular R:R aproximado (assumindo risco de €2)
+    const assumedRisk = 2;
+    stats.riskRewardRatio = Math.abs(trade.realizedPLEUR / assumedRisk);
+
+    // Calcular percentual (assumindo capital de €100)
+    const assumedCapital = 100;
+    stats.percentageGain = (trade.realizedPLEUR / assumedCapital) * 100;
+
+    return stats;
+  }
+
+
+
   loadTrades() {
     const filter = {
       // Evita erro 400: campo Instrument obrigatório na API
@@ -256,7 +305,8 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     ];
   }
 
-  applyFilters() {
+ applyFilters() {
+    this.currentPage = 0;
     this.loadDashboardData();
   }
 
@@ -267,30 +317,233 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
       endDate: '',
       groupBy: 'instrument'
     };
+    this.currentPage = 0;
     this.loadDashboardData();
   }
 
-  // Import JSON com salvamento local (IndexedDB-like via localStorage)
+  private buildTradeFilter(): any {
+    const filter: any = {
+      OrderBy: '-executedAtUTC',
+      Limit: this.pageSize,
+      Skip: 0
+    };
+
+    // Não adicionar Instrument se estiver vazio ou for "ALL"
+    if (this.filters.instrument &&
+        this.filters.instrument.trim() !== '' &&
+        this.filters.instrument.toUpperCase() !== 'ALL') {
+      filter.Instrument = this.filters.instrument;
+    }
+
+    if (this.filters.startDate) {
+      filter.StartDate = new Date(this.filters.startDate);
+    }
+
+    if (this.filters.endDate) {
+      filter.EndDate = new Date(this.filters.endDate);
+    }
+
+    return filter;
+  }
+
+  // Importar arquivo (JSON ou CSV) e enviar para API /api/functions/importTrades
   handleFileInput(event: any) {
     const file = event.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (e: any) => {
+      const text: string = e.target.result;
+      // Tentar JSON primeiro (formato { trades: [...] , statementDateISO?: string })
       try {
-        const json = JSON.parse(e.target.result);
+        const json = JSON.parse(text);
         if (Array.isArray(json.trades)) {
-          this.trades = json.trades;
-          localStorage.setItem('importedTrades', JSON.stringify(this.trades));
-          this.updatePivotData();
-          this.updateCharts();
-        } else {
-          throw new Error('Formato inválido');
+          this.importTradesPayload(file.name, json.statementDateISO, json.trades);
+          return;
         }
       } catch {
-        this.error = 'JSON inválido';
+        // não é JSON válido — tentar CSV abaixo
       }
+
+      // Tentar CSV simples (cabeçalho + linhas). Espera colunas como executedAtUTC,instrument,side,realizedPLEUR,...
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length > 1 && lines[0].includes(',')) {
+        const headers = lines[0].split(',').map(h => h.trim());
+        const trades = lines.slice(1).map(line => {
+          const cols = line.split(',').map(c => c.trim());
+          const obj: any = {};
+          headers.forEach((h, idx) => {
+            obj[h] = cols[idx];
+          });
+          if (obj.realizedPLEUR !== undefined) obj.realizedPLEUR = parseFloat(String(obj.realizedPLEUR)) || 0;
+          if (obj.durationMin !== undefined) obj.durationMin = obj.durationMin ? parseInt(String(obj.durationMin), 10) : undefined;
+          return obj;
+        });
+        this.importTradesPayload(file.name, undefined, trades);
+        return;
+      }
+
+      // Formato não reconhecido — fallback para salvar localmente (como antes) ou exibir erro
+      try {
+        // tentar parse como JSON simples de array
+        const arr = JSON.parse(text);
+        if (Array.isArray(arr)) {
+          this.importTradesPayload(file.name, undefined, arr);
+          return;
+        }
+      } catch {}
+
+      this.error = 'Formato de arquivo não suportado. Envie JSON com chave "trades" ou CSV com cabeçalho.';
     };
     reader.readAsText(file);
+  }
+
+  private validateAndNormalizeTrades(trades: any[]): { valid: boolean; errors: string[]; normalized: any[] } {
+    const errors: string[] = [];
+    const normalized: any[] = trades.map((t: any, idx: number) => {
+      const row = t || {};
+      const n: any = {};
+
+      // executedAtUTC -> ISO string required
+      if (row.executedAtUTC) {
+        const d = new Date(row.executedAtUTC);
+        if (isNaN(d.getTime())) {
+          errors.push(`Linha ${idx + 1}: campo 'executedAtUTC' inválido ("${row.executedAtUTC}") — deve ser uma data ISO.`);
+        } else {
+          n.executedAtUTC = d.toISOString();
+        }
+      } else {
+        errors.push(`Linha ${idx + 1}: campo 'executedAtUTC' ausente.`);
+      }
+
+      // instrument (string)
+      n.instrument = row.instrument ? String(row.instrument) : '';
+      if (!n.instrument) {
+        errors.push(`Linha ${idx + 1}: campo 'instrument' ausente ou vazio.`);
+      }
+
+      // side (buy|sell) — aceitar também BUY/SELL e variações
+      const side = row.side ? String(row.side).toLowerCase() : '';
+      if (side === 'buy' || side === 'sell') {
+        n.side = side;
+      } else {
+        errors.push(`Linha ${idx + 1}: campo 'side' inválido ("${row.side}"). Use "buy" ou "sell".`);
+      }
+
+      // realizedPLEUR (number)
+      if (row.realizedPLEUR !== undefined && row.realizedPLEUR !== null && row.realizedPLEUR !== '') {
+        const val = Number(row.realizedPLEUR);
+        if (isNaN(val)) {
+          errors.push(`Linha ${idx + 1}: 'realizedPLEUR' não é um número ("${row.realizedPLEUR}").`);
+          n.realizedPLEUR = 0;
+        } else {
+          n.realizedPLEUR = val;
+        }
+      } else {
+        n.realizedPLEUR = 0;
+      }
+
+      // durationMin (integer) — garantir campo presente (API espera number)
+      if (row.durationMin !== undefined && row.durationMin !== null && row.durationMin !== '') {
+        const dm = Number(row.durationMin);
+        n.durationMin = isNaN(dm) ? 0 : Math.round(dm);
+      } else {
+        n.durationMin = 0;
+      }
+
+      // optional fields passthrough (setup, notes, tags, youtubeLink, etc.)
+      if (row.setup) n.setup = row.setup;
+      if (row.notes) n.notes = row.notes;
+      if (row.tags) n.tags = Array.isArray(row.tags) ? row.tags : String(row.tags).split(',').map((s: string) => s.trim());
+      if (row.youtubeLink) n.youtubeLink = row.youtubeLink;
+
+      return n;
+    });
+
+    return { valid: errors.length === 0, errors, normalized };
+  }
+
+  private importTradesPayload(name?: string, statementDateISO?: string, trades?: any[]) {
+    if (!trades || trades.length === 0) {
+      this.error = 'Nenhum trade encontrado para importar.';
+      return;
+    }
+
+    // Validar e normalizar antes de enviar ao servidor
+    const validation = this.validateAndNormalizeTrades(trades);
+    if (!validation.valid) {
+      // Não enviar se houver erros de validação — mostrar detalhes ao usuário
+      this.error = `Erros de validação detectados:\n${validation.errors.join('\n')}`;
+      console.error('Erros de validação antes de enviar import:', validation.errors);
+      return;
+    }
+
+    const normalizedTrades = validation.normalized;
+
+    // Mostrar loading leve
+    this.loading = true;
+    this.error = null;
+
+    this.tradeService.importTrades({
+      name,
+      statementDateISO,
+      trades: normalizedTrades
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        this.loading = false;
+        // Se backend devolver objeto de erros de validação, mostre ao usuário
+        if (res && (res.success === false || res.errors)) {
+          // Salva localmente como fallback
+          localStorage.setItem('importedTrades', JSON.stringify(normalizedTrades));
+          const details = res.errors ? JSON.stringify(res.errors, null, 2) : JSON.stringify(res);
+          this.error = `Importação falhou no servidor. Detalhes: ${details}. Dados salvos localmente.`;
+          console.error('Importação falhou:', res);
+          return;
+        }
+
+        // Sucesso: recarregar dashboard e notificar
+        this.alerts.unshift({
+          type: 'good',
+          icon: '✅',
+          title: 'Importação concluída',
+          msg: `Foram importados ${normalizedTrades.length} trades (${name || 'arquivo local'}).`
+        });
+        // atualizar lista local e gráficos
+        this.loadDashboardData();
+        // esconder alerta após alguns segundos
+        setTimeout(() => {
+          this.alerts.shift();
+        }, 5000);
+      },
+      error: (err) => {
+        console.error('Erro na importação:', err);
+        this.loading = false;
+
+        // Tentar extrair detalhes de validação do corpo de erro retornado pelo servidor
+        let serverMsg = 'Erro ao enviar para servidor. Dados salvos localmente.';
+        try {
+          const se = err?.error;
+          if (se) {
+            // Se for objeto de validação (RFC problem details), montamos mensagem legível
+            if (se.title || se.errors) {
+              const trace = se.traceId ? ` traceId: ${se.traceId}` : '';
+              const errors = se.errors ? JSON.stringify(se.errors, null, 2) : '';
+              serverMsg = `Servidor respondeu: ${se.title || 'Erro'}${trace}. Erros: ${errors}`;
+            } else {
+              serverMsg = typeof se === 'string' ? se : JSON.stringify(se);
+            }
+          } else if (err.message) {
+            serverMsg = err.message;
+          }
+        } catch (e) {
+          serverMsg = 'Erro desconhecido do servidor.';
+        }
+
+        // fallback: salvar localmente
+        localStorage.setItem('importedTrades', JSON.stringify(normalizedTrades));
+        this.error = serverMsg;
+      }
+    });
   }
 
   loadDemo() {
@@ -315,8 +568,41 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Navegação para detalhes do trade
-  openTradeDetail(tradeId: string) {
+openTradeDetail(tradeId: string) {
+    if (!tradeId) {
+      console.error('Trade ID não fornecido');
+      return;
+    }
+
+    // Navegar para a página de detalhes
     this.router.navigate(['/trade', tradeId]);
+  }
+
+  loadMoreTrades() {
+    if (this.loading) return;
+
+    this.currentPage++;
+    const filter = this.buildTradeFilter();
+    filter.Skip = this.currentPage * this.pageSize;
+    filter.Limit = this.pageSize;
+
+    this.loading = true;
+
+    this.tradeService.list(filter)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Adicionar trades à lista existente
+          this.trades = [...this.trades, ...(response.results || [])];
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Erro ao carregar mais trades', error);
+          this.error = 'Erro ao carregar mais trades';
+          this.loading = false;
+          this.currentPage--; // Reverter página em caso de erro
+        }
+      });
   }
 
   // Update functions
