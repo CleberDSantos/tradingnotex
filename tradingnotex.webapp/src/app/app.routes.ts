@@ -5,6 +5,7 @@ import { Partials } from './partials/partials';
 import { RiskComponent } from './risk/risk';
 import { EvolutionComponent } from './evolution/evolution';
 import { AchievementsComponent } from './achievements/achievements';
+import { TradeDetail } from './trade-detail/trade-detail';
 import { Logout } from './logout/logout';
 import { authGuard } from './auth-guard';
 
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'risk', component: RiskComponent, canActivate: [authGuard] },
   { path: 'evolution', component: EvolutionComponent, canActivate: [authGuard] },
   { path: 'achievements', component: AchievementsComponent, canActivate: [authGuard] },
+  { path: 'trade/:id', component: TradeDetail, canActivate: [authGuard] },
   { path: 'logout', component: Logout },
-  { path: '', redirectTo: '/login', pathMatch: 'full' } // Redireciona para login por padrão
+  { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

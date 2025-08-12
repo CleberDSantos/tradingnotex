@@ -6,11 +6,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authStateService = inject(AuthStateService);
   const token = authStateService.getToken();
 
+  if (req.url.includes('/Auth/login') || req.url.includes('/Auth/register')) {
+    return next(req);
+  }
+
   if (token) {
-    // Clonar a requisição e adicionar o cabeçalho de autorização
     const authReq = req.clone({
-      headers: req.headers.set('X-Parse-Session-Token', token)
+      setHeaders: {
+        'X-Parse-Session-Token': token
+      }
     });
+    
+    console.log('Token sendo enviado:', token);
+    console.log('URL da requisição:', req.url);
+    
     return next(authReq);
   }
 

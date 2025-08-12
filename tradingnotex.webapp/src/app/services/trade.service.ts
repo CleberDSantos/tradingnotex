@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 export interface Trade {
   objectId?: string;
@@ -66,19 +67,40 @@ export class TradeService {
     Skip?: number
   }): Observable<{results: Trade[]}> {
     let httpParams = new HttpParams();
+    
     if (params) {
-      Object.keys(params).forEach(key => {
-        const v: any = (params as any)[key];
-        if (v !== undefined && v !== null) {
-          if (v instanceof Date) {
-            httpParams = httpParams.set(key, v.toISOString());
-          } else {
-            httpParams = httpParams.set(key, String(v));
-          }
-        }
-      });
+      if (params.Instrument && params.Instrument.trim() !== '' && params.Instrument !== 'ALL') {
+        httpParams = httpParams.set('Instrument', params.Instrument);
+      }
+      
+      if (params.StartDate) {
+        httpParams = httpParams.set('StartDate', params.StartDate.toISOString());
+      }
+      
+      if (params.EndDate) {
+        httpParams = httpParams.set('EndDate', params.EndDate.toISOString());
+      }
+      
+      if (params.OrderBy) {
+        httpParams = httpParams.set('OrderBy', params.OrderBy);
+      }
+      
+      if (params.Limit !== undefined) {
+        httpParams = httpParams.set('Limit', params.Limit.toString());
+      }
+      
+      if (params.Skip !== undefined) {
+        httpParams = httpParams.set('Skip', params.Skip.toString());
+      }
     }
-    return this.http.get<{results: Trade[]}>(this.base, { params: httpParams });
+    
+    return this.http.get<{results: Trade[]}>(this.base, { params: httpParams })
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao buscar trades:', error);
+          return of({ results: [] });
+        })
+      );
   }
 
   get(objectId: string): Observable<Trade> {
@@ -101,32 +123,70 @@ export class TradeService {
     let params = new HttpParams();
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
-    return this.http.get<KPIsResponse>(`${this.base}/kpis`, { params });
+    
+    return this.http.get<KPIsResponse>(`${this.base}/kpis`, { params })
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao buscar KPIs:', error);
+          return of({
+            totalPL: 0,
+            winRate: 0,
+            expectancy: 0,
+            maxGain: 0,
+            maxLoss: 0,
+            drawdown: 0,
+            totalTrades: 0
+          });
+        })
+      );
   }
 
   getHeatmap(): Observable<HourlyHeatmapResponse> {
-    return this.http.get<HourlyHeatmapResponse>(`${this.base}/heatmap`);
+    return this.http.get<HourlyHeatmapResponse>(`${this.base}/heatmap`)
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao buscar heatmap:', error);
+          return of({
+            heatmap: [],
+            bestHour: { hour: 0, pl: 0 },
+            worstHour: { hour: 0, pl: 0 }
+          });
+        })
+      );
   }
 
   getInsights(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.base}/insights`);
+    return this.http.get<string[]>(`${this.base}/insights`)
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao buscar insights:', error);
+          return of([
+            'Carregando insights...',
+            'Verifique sua conexão com a API'
+          ]);
+        })
+      );
   }
 
-  // Métodos para comentários
-  listComments(objectId: string): Observable<any> {
-    return this.http.get(`${this.base}/${encodeURIComponent(objectId)}/comments`);
+  listComments(objectId: string): Observable<Comment[]> {
+    return this.http.get<Comment[]>(`${this.base}/${encodeURIComponent(objectId)}/comments`)
+      .pipe(
+        catchError(error => {
+          console.error('Erro ao buscar comentários:', error);
+          return of([]);
+        })
+      );
   }
 
-  addComment(objectId: string, payload: { text?: string; screenshot?: string }): Observable<any> {
-    return this.http.post(`${this.base}/${encodeURIComponent(objectId)}/comments`, payload);
+  addComment(objectId: string, payload: { text?: string; screenshot?: string }): Observable<Comment> {
+    return this.http.post<Comment>(`${this.base}/${encodeURIComponent(objectId)}/comments`, payload);
   }
 
-  analyzeComment(objectId: string, commentId: string): Observable<any> {
-    return this.http.post(`${this.base}/${encodeURIComponent(objectId)}/comments/${encodeURIComponent(commentId)}/analyze`, {});
+  analyzeComment(objectId: string, commentId: string): Observable<Comment> {
+    return this.http.post<Comment>(`${this.base}/${encodeURIComponent(objectId)}/comments/${encodeURIComponent(commentId)}/analyze`, {});
   }
 
-  // Método para atualizar detalhes do trade
-  updateDetails(objectId: string, payload: Partial<Trade>): Observable<any> {
-    return this.http.put(`${this.base}/${encodeURIComponent(objectId)}/details`, payload);
+  updateDetails(objectId: string, payload: Partial<Trade>): Observable<Trade> {
+    return this.http.put<Trade>(`${this.base}/${encodeURIComponent(objectId)}/details`, payload);
   }
 }

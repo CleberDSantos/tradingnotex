@@ -29,16 +29,20 @@ namespace TradingNoteX.Services.Implementations
         {
             // Implementação existente...
             var filterBuilder = Builders<Trade>.Filter;
-            var filters = new List<FilterDefinition<Trade>>
-            {
-                filterBuilder.Eq(t => t.OwnerId, userId)
-            };
-            
-            if (!string.IsNullOrEmpty(filter.Instrument))
+            //var filters = new List<FilterDefinition<Trade>>
+            //{
+            //    filterBuilder.Eq(t => t.OwnerId, userId)
+            //}
+
+            var filters = new List<FilterDefinition<Trade>>();
+
+            if (!string.IsNullOrEmpty(filter.Instrument) &&
+     filter.Instrument.Trim() != "" &&
+     filter.Instrument.ToUpper() != "ALL")
             {
                 filters.Add(filterBuilder.Eq(t => t.Instrument, filter.Instrument));
             }
-            
+
             if (filter.StartDate.HasValue)
             {
                 filters.Add(filterBuilder.Gte(t => t.ExecutedAtUTC, filter.StartDate.Value));
@@ -59,6 +63,17 @@ namespace TradingNoteX.Services.Implementations
                 sort = Builders<Trade>.Sort.Descending(sortField);
             }
             
+
+            if(filters.Count == 0)
+            {
+                combinedFilter = filterBuilder.Eq(t => t.Instrument, "TECH100");
+            }
+            else
+            {
+                filters.Add(filterBuilder.Eq(t => t.OwnerId, userId));
+                combinedFilter = filterBuilder.And(filters);
+            }   
+
             return await _trades.Find(combinedFilter)
                 .Sort(sort)
                 .Skip(filter.Skip)

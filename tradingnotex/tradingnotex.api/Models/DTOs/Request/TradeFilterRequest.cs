@@ -4,7 +4,7 @@ namespace TradingNoteX.Models.DTOs.Request
 {
     public class TradeFilterRequest
     {
-        public string Instrument { get; set; }
+        public string? Instrument { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string OrderBy { get; set; } = "-createdAt";
