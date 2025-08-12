@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 import { PartialsService, PartialPlanRequest } from '../services/partials.service';
 import { FormsModule } from '@angular/forms';
-import { NgIf, JsonPipe, NgFor, NgClass } from '@angular/common';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-partials',
-  imports: [FormsModule, NgIf, JsonPipe, NgFor, NgClass],
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './partials.html',
-  styleUrl: './partials.scss'
+  styleUrls: ['./partials.scss']
 })
 export class Partials {
   partialPlanData: PartialPlanRequest = {

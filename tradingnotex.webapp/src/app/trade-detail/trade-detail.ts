@@ -306,6 +306,10 @@ export class TradeDetail implements OnInit, AfterViewInit {
       }
     });
   }
+  // Método para verificar se um comentário já foi analisado pela IA
+  isCommentAnalyzed(comment: Comment): boolean {
+    return !!comment.aiAnalysisRendered;
+  }
 
   getEntryTypeLabel(): string {
     if (this.entryTypeValue < 30) return '🔥 Impulso Forte';
@@ -332,4 +336,14 @@ export class TradeDetail implements OnInit, AfterViewInit {
   goBack() {
     this.router.navigate(['/dashboard']);
   }
+
+  handleScreenshot(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.addPastedFile(file);
+    }
+  }
+
+
+
 }

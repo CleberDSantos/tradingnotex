@@ -199,21 +199,22 @@
           <div class="text-xs text-gray-400 mt-2">{{ comment.createdAt | date:'short' }}</div>
         </div>
 
-        <button *ngIf="!comment.aiAnalysis"
+        <button *ngIf="!isCommentAnalyzed(comment)"
                 (click)="requestAIAnalysis(comment.id)"
                 class="text-xs text-cyanx hover:text-cyan-300 mt-2 ml-3 transition-colors">
           🤖 Analisar com IA
         </button>
 
         <!-- Resposta da IA -->
-        <div *ngIf="comment.aiAnalysis" class="mt-3 flex gap-3">
+        <div *ngIf="comment.aiAnalysisRendered" class="mt-3 flex gap-3">
           <div class="flex-1">
             <div class="comment-bubble ai text-white bg-gradient-to-r from-blue-500 to-cyan-400">
               <div class="font-semibold text-sm mb-1 flex items-center gap-2">
-                🤖 Assistente IA
-                <span class="text-xs bg-white/20 px-2 py-0.5 rounded">Análise</span>
+                {{ comment.aiAnalysisRendered.author }}
+                <span class="text-xs bg-white/20 px-2 py-0.5 rounded">{{ comment.aiAnalysisRendered.badge }}</span>
               </div>
-              <div class="text-sm">{{ comment.aiAnalysis }}</div>
+              <div class="text-sm" [innerHTML]="comment.aiAnalysisRendered.text"></div>
+              <div class="text-xs opacity-80 mt-2">{{ comment.aiAnalysisRendered.timestamp }}</div>
             </div>
           </div>
           <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white">
@@ -340,21 +341,6 @@
             class="absolute top-2 right-2 w-8 h-8 bg-bad rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-colors">
       ✕
     </button>
-  </div>
-</div>
-
-<!-- Indicador de digitação da IA -->
-<div *ngIf="showAITyping" class="card p-4 animate-slide-up">
-  <div class="flex items-center gap-3">
-    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white">
-      AI
-    </div>
-    <div class="typing-indicator">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    </div>
-    <span class="text-xs text-gray-400">IA está analisando...</span>
   </div>
 </div>
 

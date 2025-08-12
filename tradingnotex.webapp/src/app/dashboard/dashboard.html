@@ -3,15 +3,14 @@
   <!-- Header -->
   <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
     <div>
-      <h1 class="text-3xl font-black text-gray-100">📊 Dashboard de Trades <span class="text-gray-500 text-xl">— Unificado</span></h1>
-      <p class="text-sm text-gray-400 mt-1">Base SMC OTE — tudo em um lugar</p>
+      <h1 class="text-3xl font-black text-gray-100">📊 Dashboard de Trades </h1>
     </div>
     <div class="flex items-center gap-3">
       <label class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50 cursor-pointer">
         <span class="flex items-center gap-2">📁 Importar JSON</span>
         <input type="file" (change)="handleFileInput($event)" accept="application/json" class="hidden">
       </label>
-      <button (click)="loadDemo()" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button>
+      <!-- <button (click)="loadDemo()" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button> -->
 
       <!-- Alerts bell -->
       <button (click)="toggleAlerts()" class="relative p-2 rounded border border-edge hover:bg-card" title="Alertas">
@@ -49,14 +48,50 @@
         </select>
       </div>
       <div class="flex gap-2 items-end">
-        <button (click)="applyFilters()" class="px-4 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">✅ Aplicar</button>
+        <button (click)="applyFilters()" class="px-2 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">✅ Aplicar</button>
         <button (click)="clearFilters()" class="px-4 py-2 rounded border border-edge hover:bg-card">❌ Limpar</button>
       </div>
     </div>
   </section>
 
   <!-- KPIs Linha 1 -->
-  <section id="kpiGlobal" class="grid grid-cols-2 md:grid-cols-6 gap-6 animate-slide-up" style="animation-delay: .1s"></section>
+  <section id="kpiGlobal" class="grid grid-cols-2 md:grid-cols-6 gap-6 animate-slide-up" style="animation-delay: .1s">
+    <div class="card kpi text-good">
+      <div class="text-2xl mb-2">💰</div>
+      <div class="text-xs muted">Resultado Total</div>
+      <div class="v text-good">{{ kpis.totalPL | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="card kpi text-cyanx">
+      <div class="text-2xl mb-2">📊</div>
+      <div class="text-xs muted">Win Rate</div>
+      <div class="v text-cyanx">{{ kpis.winRate | number:'1.2-2' }}%</div>
+    </div>
+
+    <div class="card kpi text-accent">
+      <div class="text-2xl mb-2">📈</div>
+      <div class="text-xs muted">Expectancy</div>
+      <div class="v text-accent">{{ kpis.expectancy | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="card kpi text-good">
+      <div class="text-2xl mb-2">🚀</div>
+      <div class="text-xs muted">Maior Ganho</div>
+      <div class="v text-good">{{ kpis.maxGain | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="card kpi text-bad">
+      <div class="text-2xl mb-2">⚠️</div>
+      <div class="text-xs muted">Maior Perda</div>
+      <div class="v text-bad">{{ kpis.maxLoss | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="card kpi text-accent">
+      <div class="text-2xl mb-2">📉</div>
+      <div class="text-xs muted">Drawdown</div>
+      <div class="v text-accent">{{ kpis.drawdown | number:'1.2-2' }}</div>
+    </div>
+  </section>
 
   <!-- KPIs Linha 2 -->
   <section class="grid md:grid-cols-4 gap-6 animate-slide-up" style="animation-delay: .12s">
@@ -84,7 +119,7 @@
 
   <!-- Insights -->
   <section class="card p-4 animate-slide-up" style="animation-delay: .15s">
-    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Insights em linguagem simples</h2>
+    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Minhas considerações a você:</h2>
     <div class="space-y-2 text-gray-200">
       <div *ngFor="let insight of insights" class="p-2 rounded hover:bg-edge/50">• {{ insight }}</div>
       <div *ngIf="insights.length === 0" class="text-gray-400 text-center py-4">📊 Carregando insights...</div>
@@ -256,7 +291,7 @@
     </div>
     <div class="flex gap-2">
       <button
-        (click)="loadMoreTrades()"
+        (click)="loadTrades()"
         [disabled]="loading || trades.length >= kpis.totalTrades"
         class="px-4 py-2 rounded bg-edge hover:bg-card border border-edge transition-all disabled:opacity-50 disabled:cursor-not-allowed">
         Carregar mais

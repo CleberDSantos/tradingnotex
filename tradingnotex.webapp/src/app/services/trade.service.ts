@@ -45,9 +45,16 @@ export interface Comment {
   id: string;
   author?: string;
   text?: string;
-  screenshot?: string;
+  screenshot?: string; // mantido para compatibilidade
   createdAt?: string;
   aiAnalysis?: string;
+  aiAnalysisRendered?: {
+    author: string;
+    badge: string;
+    text: string;
+    timestamp: string;
+    avatarType: string;
+  };
   attachments?: Array<{
     type: string;
     data?: string;
@@ -55,6 +62,12 @@ export interface Comment {
     size?: number;
     mimeType?: string;
   }>;
+}
+
+export interface ImportTradesPayload {
+  name?: string;
+  statementDateISO?: string;
+  trades: Trade[];
 }
 
 @Injectable({
@@ -185,9 +198,46 @@ export class TradeService {
       );
   }
 
-  importTrades(payload: { name?: string; statementDateISO?: string; trades?: any[] }): Observable<any> {
+    importTrades(payload: ImportTradesPayload): Observable<any> {
     const url = environment.apiBaseUrl.replace(/\/+$/, '') + '/api/functions/importTrades';
-    return this.http.post<any>(url, payload)
+
+    // Garantir que o payload enviado inclua statementDateISO.
+    // Se não vier preenchido, inferimos a partir do primeiro executedAtUTC disponível.
+    let statementDateISO = payload.statementDateISO;
+    if (!statementDateISO && payload.trades && payload.trades.length > 0) {
+      try {
+        const dates = payload.trades
+          .map(t => (t && (t.executedAtUTC || (t as any).executedAtUTC) ? String((t as any).executedAtUTC) : ''))
+          .filter(d => !!d)
+          .map(d => new Date(d))
+          .filter(d => !isNaN(d.getTime()))
+          .sort((a, b) => a.getTime() - b.getTime());
+
+        if (dates.length > 0) {
+          // Use somente a parte de data (YYYY-MM-DD) — compatível com o que o backend costuma esperar
+          statementDateISO = dates[0].toISOString().split('T')[0];
+        }
+      } catch (e) {
+        // falha ao inferir, manter undefined
+      }
+    }
+
+    const body: ImportTradesPayload = {
+      name: payload.name,
+      statementDateISO: statementDateISO,
+      trades: payload.trades || []
+    };
+
+    // Log para depuração — veja no console do navegador o JSON enviado
+    try {
+      // eslint-disable-next-line no-console
+      console.log('TradeService.importTrades -> sending payload:', JSON.stringify(body));
+    } catch (e) {
+      // ignore
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    return this.http.post<any>(url, body, { headers })
       .pipe(
         catchError(error => {
           console.error('Erro ao importar trades:', error);

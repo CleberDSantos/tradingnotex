@@ -28,6 +28,7 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
+  Math = Math;
   private destroy$ = new Subject<void>();
 
   // Estados principais
@@ -354,48 +355,67 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     const reader = new FileReader();
     reader.onload = (e: any) => {
       const text: string = e.target.result;
-      // Tentar JSON primeiro (formato { trades: [...] , statementDateISO?: string })
-      try {
-        const json = JSON.parse(text);
-        if (Array.isArray(json.trades)) {
-          this.importTradesPayload(file.name, json.statementDateISO, json.trades);
-          return;
-        }
-      } catch {
-        // não é JSON válido — tentar CSV abaixo
-      }
 
-      // Tentar CSV simples (cabeçalho + linhas). Espera colunas como executedAtUTC,instrument,side,realizedPLEUR,...
-      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-      if (lines.length > 1 && lines[0].includes(',')) {
-        const headers = lines[0].split(',').map(h => h.trim());
-        const trades = lines.slice(1).map(line => {
-          const cols = line.split(',').map(c => c.trim());
-          const obj: any = {};
-          headers.forEach((h, idx) => {
-            obj[h] = cols[idx];
-          });
-          if (obj.realizedPLEUR !== undefined) obj.realizedPLEUR = parseFloat(String(obj.realizedPLEUR)) || 0;
-          if (obj.durationMin !== undefined) obj.durationMin = obj.durationMin ? parseInt(String(obj.durationMin), 10) : undefined;
-          return obj;
-        });
-        this.importTradesPayload(file.name, undefined, trades);
+      if (this._parseJsonTrades(text, file.name)) {
         return;
       }
 
-      // Formato não reconhecido — fallback para salvar localmente (como antes) ou exibir erro
-      try {
-        // tentar parse como JSON simples de array
-        const arr = JSON.parse(text);
-        if (Array.isArray(arr)) {
-          this.importTradesPayload(file.name, undefined, arr);
-          return;
-        }
-      } catch {}
+      if (this._parseCsvTrades(text, file.name)) {
+        return;
+      }
 
       this.error = 'Formato de arquivo não suportado. Envie JSON com chave "trades" ou CSV com cabeçalho.';
     };
     reader.readAsText(file);
+  }
+
+  private _parseJsonTrades(text: string, fileName: string): boolean {
+    try {
+      const json = JSON.parse(text);
+
+      // Caso padrão: objeto com chave "trades" (pode também incluir "name" e "statementDateISO")
+      if (json && Array.isArray(json.trades)) {
+        const name = json.name || fileName;
+        const statementDateISO = json.statementDateISO || undefined;
+        this.importTradesPayload(name, statementDateISO, json.trades);
+        return true;
+      }
+
+      // Formato simples: o arquivo é um array de trades
+      if (Array.isArray(json)) {
+        this.importTradesPayload(fileName, undefined, json);
+        return true;
+      }
+
+      // Compatibilidade: objeto que inclui explicitamente name e statementDateISO
+      if (json && json.name && json.statementDateISO) {
+        this.importTradesPayload(json.name, json.statementDateISO, json.trades || []);
+        return true;
+      }
+    } catch {
+      // não é JSON válido
+    }
+    return false;
+  }
+
+  private _parseCsvTrades(text: string, fileName: string): boolean {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length > 1 && lines[0].includes(',')) {
+      const headers = lines[0].split(',').map(h => h.trim());
+      const trades = lines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.trim());
+        const obj: any = {};
+        headers.forEach((h, idx) => {
+          obj[h] = cols[idx];
+        });
+        if (obj.realizedPLEUR !== undefined) obj.realizedPLEUR = parseFloat(String(obj.realizedPLEUR)) || 0;
+        if (obj.durationMin !== undefined) obj.durationMin = obj.durationMin ? parseInt(String(obj.durationMin), 10) : undefined;
+        return obj;
+      });
+      this.importTradesPayload(fileName, undefined, trades);
+      return true;
+    }
+    return false;
   }
 
   private validateAndNormalizeTrades(trades: any[]): { valid: boolean; errors: string[]; normalized: any[] } {
@@ -484,9 +504,23 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     this.loading = true;
     this.error = null;
 
+    // Se statementDateISO não foi fornecido pelo arquivo, inferimos a partir do primeiro executedAtUTC válido
+    let inferredStatementDateISO: string | undefined = statementDateISO;
+    if (!inferredStatementDateISO && normalizedTrades && normalizedTrades.length > 0) {
+      // Escolher o menor executedAtUTC (primeiro cronologicamente)
+      try {
+        inferredStatementDateISO = normalizedTrades
+          .map((t: any) => t.executedAtUTC)
+          .filter((d: any) => !!d)
+          .sort()[0];
+      } catch (e) {
+        inferredStatementDateISO = normalizedTrades[0].executedAtUTC;
+      }
+    }
+
     this.tradeService.importTrades({
       name,
-      statementDateISO,
+      statementDateISO: inferredStatementDateISO,
       trades: normalizedTrades
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
@@ -568,7 +602,9 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Navegação para detalhes do trade
-openTradeDetail(tradeId: string) {
+
+
+  openTradeDetail(tradeId: string) {
     if (!tradeId) {
       console.error('Trade ID não fornecido');
       return;

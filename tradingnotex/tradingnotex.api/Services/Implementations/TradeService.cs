@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using TradingNoteX.Models.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
+using TradingNoteX.Models.Entities;
 using TradingNoteX.Models.Settings;
 using TradingNoteX.Services.Interfaces;
 
@@ -16,14 +17,18 @@ namespace TradingNoteX.Services.Implementations
     public class TradeService : ITradeService
     {
         private readonly IMongoCollection<Trade> _trades;
-        
-        public TradeService(IOptions<MongoDbSettings> settings)
+        private readonly IAIAnalysisService _aiAnalysisService;
+        private readonly ILogger<TradeService> _logger;
+
+        public TradeService(IOptions<MongoDbSettings> settings, IAIAnalysisService aiAnalysisService, ILogger<TradeService> logger)
         {
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
             _trades = database.GetCollection<Trade>(settings.Value.TradesCollection);
+            _aiAnalysisService = aiAnalysisService;
+            _logger = logger;
         }
-        
+
         // Métodos existentes (manter os implementados anteriormente)
         public async Task<List<Trade>> GetTradesAsync(string userId, TradeFilterRequest filter)
         {
@@ -303,53 +308,181 @@ namespace TradingNoteX.Services.Implementations
             
             return await GetTradeByIdAsync(tradeId, userId);
         }
-        
+
         public async Task<Comment> AddCommentAsync(string tradeId, string userId, AddCommentRequest request)
         {
+            // Converter DTOs de attachments para entidades
+            var attachments = new List<CommentAttachment>();
+
+            if (request.Attachments != null && request.Attachments.Any())
+            {
+                foreach (var attachmentDto in request.Attachments)
+                {
+                    attachments.Add(new CommentAttachment
+                    {
+                        Type = attachmentDto.Type,
+                        Data = attachmentDto.Data,
+                        Filename = attachmentDto.Filename,
+                        Size = attachmentDto.Size,
+                        MimeType = attachmentDto.MimeType
+                    });
+                }
+            }
+
+            // Compatibilidade com screenshot antigo
+            if (!string.IsNullOrWhiteSpace(request.Screenshot) && !attachments.Any())
+            {
+                attachments.Add(new CommentAttachment
+                {
+                    Type = "image",
+                    Data = request.Screenshot,
+                    Filename = "screenshot.png",
+                    Size = 0,
+                    MimeType = "image/png"
+                });
+            }
+
             var comment = new Comment
             {
                 Author = userId,
                 Text = request.Text,
-                Screenshot = request.Screenshot,
+                Screenshot = request.Screenshot, // Mantido para compatibilidade
+                Attachments = attachments,
                 CreatedAt = DateTime.UtcNow
             };
-            
-            var filter = Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId);
+
+            var filter = Builders<Trade>.Filter.And(
+                Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
+            );
+
             var update = Builders<Trade>.Update.Push(t => t.Comments, comment);
-            
+
             await _trades.UpdateOneAsync(filter, update);
-            
+
             return comment;
         }
-        
+
         public async Task<Comment> AnalyzeCommentAsync(string tradeId, string userId, string commentId)
         {
             var trade = await GetTradeByIdAsync(tradeId, userId);
+
+            if (trade == null)
+                throw new KeyNotFoundException("Trade não encontrado");
+
             var comment = trade.Comments.FirstOrDefault(c => c.Id == commentId);
-            
+
             if (comment == null)
                 throw new KeyNotFoundException("Comentário não encontrado");
-            
-            // Aqui seria integrado com um serviço de IA real
-            // Por enquanto, vamos simular uma análise
-            comment.AiAnalysis = $"Análise do comentário: {comment.Text}. " +
-                $"Este trade foi um {(trade.RealizedPLEUR >= 0 ? "sucesso" : "fracasso")} " +
-                $"com P/L de €{trade.RealizedPLEUR}. " +
-                $"O trader demonstrou {(trade.Greed ? "sinais de ganância" : "disciplina")} na operação.";
-            
+
+            // Usar o serviço de IA para análise
+            if (_aiAnalysisService != null)
+            {
+                try
+                {
+                    // Gerar análise formatada com suporte a attachments
+                    var aiResponse = await _aiAnalysisService.GenerateFormattedAnalysis(
+                        comment.Text,
+                        trade.Side,
+                        trade.RealizedPLEUR,
+                        trade.Instrument,
+                        trade.EntryType,
+                        trade.Greed,
+                        comment.Attachments
+                    );
+
+                    // Salvar tanto o texto simples quanto a resposta formatada
+                    comment.AiAnalysis = aiResponse.Text;
+                    comment.AiAnalysisRendered = aiResponse;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao gerar análise de IA");
+
+                    // Fallback para análise local
+                    comment.AiAnalysis = GenerateFallbackAnalysis(comment.Text, trade);
+                    comment.AiAnalysisRendered = new AiAnalysisResponse
+                    {
+                        Author = "🤖 Assistente IA",
+                        Badge = "Análise",
+                        Text = comment.AiAnalysis,
+                        Timestamp = "Agora",
+                        AvatarType = "ai"
+                    };
+                }
+            }
+            else
+            {
+                // Fallback se o serviço de IA não estiver disponível
+                comment.AiAnalysis = GenerateFallbackAnalysis(comment.Text, trade);
+                comment.AiAnalysisRendered = new AiAnalysisResponse
+                {
+                    Author = "🤖 Assistente IA",
+                    Badge = "Análise",
+                    Text = comment.AiAnalysis,
+                    Timestamp = "Agora",
+                    AvatarType = "ai"
+                };
+            }
+
+            // Atualizar no banco de dados
             var filter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ObjectId, tradeId),
-                Builders<Trade>.Filter.ElemMatch(t => t.Comments, 
+                Builders<Trade>.Filter.ElemMatch(t => t.Comments,
                     Builders<Comment>.Filter.Eq(c => c.Id, commentId))
             );
-            
-            var update = Builders<Trade>.Update.Set("comments.$.aiAnalysis", comment.AiAnalysis);
-            
+
+            var update = Builders<Trade>.Update
+                .Set("comments.$.aiAnalysis", comment.AiAnalysis)
+                .Set("comments.$.aiAnalysisRendered", comment.AiAnalysisRendered);
+
             await _trades.UpdateOneAsync(filter, update);
-            
+
             return comment;
         }
-        
+
+        private string GenerateFallbackAnalysis(string commentText, Trade trade)
+        {
+            var isWinner = trade.RealizedPLEUR >= 0;
+            var entryTypeText = trade.EntryType < 30 ? "impulsiva" :
+                               trade.EntryType > 70 ? "operacional" : "balanceada";
+
+            var analysis = new StringBuilder();
+
+            if (isWinner)
+            {
+                analysis.AppendLine($"Boa execução! Trade vencedor com P/L de €{trade.RealizedPLEUR:F2}. 🎯");
+                analysis.AppendLine($"Sua entrada {entryTypeText} funcionou bem neste caso.");
+            }
+            else
+            {
+                analysis.AppendLine($"Trade com resultado negativo de €{trade.RealizedPLEUR:F2}. ⚠️");
+                analysis.AppendLine("Revise se havia confluência suficiente de fatores SMC antes da entrada.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(commentText))
+            {
+                if (commentText.ToLower().Contains("volume"))
+                {
+                    analysis.AppendLine("Excelente observação sobre volume! Continue monitorando esse fator.");
+                }
+
+                if (commentText.ToLower().Contains("divergência"))
+                {
+                    analysis.AppendLine("Divergências são úteis, mas sempre confirme com a estrutura de mercado.");
+                }
+            }
+
+            if (trade.Greed)
+            {
+                analysis.AppendLine("\n⚠️ Cuidado com a ganância. Use gestão de parciais para proteger lucros.");
+            }
+
+            analysis.AppendLine($"\nPara melhorar: sempre aguarde o preço retornar à OTE Zone (61.8%-78.6%) antes de entrar. Continue registrando seus trades! 🚀");
+
+            return analysis.ToString();
+        }
+
         public async Task<List<Comment>> GetCommentsAsync(string tradeId, string userId)
         {
             var trade = await GetTradeByIdAsync(tradeId, userId);

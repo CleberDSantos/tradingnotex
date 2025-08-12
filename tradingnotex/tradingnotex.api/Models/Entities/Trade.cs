@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
@@ -90,25 +90,67 @@ namespace TradingNoteX.Models.Entities
         [BsonElement("write")]
         public bool Write { get; set; }
     }
-    
+
     public class Comment
     {
         [BsonElement("id")]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        
+
         [BsonElement("author")]
         public string Author { get; set; }
-        
+
         [BsonElement("text")]
         public string Text { get; set; }
-        
+
         [BsonElement("screenshot")]
-        public string Screenshot { get; set; } // base64 ou URL
-        
+        public string Screenshot { get; set; } // Mantido para compatibilidade
+
+        [BsonElement("attachments")]
+        public List<CommentAttachment> Attachments { get; set; } = new List<CommentAttachment>();
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+
         [BsonElement("aiAnalysis")]
         public string AiAnalysis { get; set; }
+
+        [BsonElement("aiAnalysisRendered")]
+        public AiAnalysisResponse AiAnalysisRendered { get; set; }
+    }
+
+    public class CommentAttachment
+    {
+        [BsonElement("type")]
+        public string Type { get; set; } // "image" ou "file"
+
+        [BsonElement("data")]
+        public string Data { get; set; } // Base64 ou URL
+
+        [BsonElement("filename")]
+        public string Filename { get; set; }
+
+        [BsonElement("size")]
+        public long Size { get; set; }
+
+        [BsonElement("mimeType")]
+        public string MimeType { get; set; }
+    }
+
+    public class AiAnalysisResponse
+    {
+        [BsonElement("author")]
+        public string Author { get; set; } = "🤖 Assistente IA";
+
+        [BsonElement("badge")]
+        public string Badge { get; set; } = "Análise";
+
+        [BsonElement("text")]
+        public string Text { get; set; }
+
+        [BsonElement("timestamp")]
+        public string Timestamp { get; set; } = "Agora";
+
+        [BsonElement("avatarType")]
+        public string AvatarType { get; set; } = "ai"; // Para aplicar CSS correto
     }
 }
