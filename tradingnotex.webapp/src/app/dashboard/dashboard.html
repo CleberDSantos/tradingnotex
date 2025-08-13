@@ -2,21 +2,9 @@
 
   <!-- Header -->
   <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
-    <div>
-      <h1 class="text-3xl font-black text-gray-100">📊 Dashboard de Trades </h1>
-    </div>
     <div class="flex items-center gap-3">
-      <label class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50 cursor-pointer">
-        <span class="flex items-center gap-2">📁 Importar JSON</span>
-        <input type="file" (change)="handleFileInput($event)" accept="application/json" class="hidden">
-      </label>
-      <!-- <button (click)="loadDemo()" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button> -->
 
-      <!-- Alerts bell -->
-      <button (click)="toggleAlerts()" class="relative p-2 rounded border border-edge hover:bg-card" title="Alertas">
-        🔔
-        <span *ngIf="alerts.length" class="absolute -top-1 -right-1 text-[10px] bg-bad text-white rounded-full px-1.5 py-0.5">{{ alerts.length }}</span>
-      </button>
+      <!-- <button (click)="loadDemo()" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button> -->
     </div>
   </header>
 

@@ -3,47 +3,69 @@
     <div class="flex items-center justify-between h-16">
       <div class="flex items-center space-x-8">
         <div class="text-xl font-bold text-good">TradingNoteX</div>
+        <div class="flex space-x-4">
+  <a routerLink="/dashboard" routerLinkActive="active"
+     class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+    📊 Dashboard
+  </a>
 
-          <div class="flex space-x-4">
-          <a routerLink="/dashboard"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            📊 Dashboard
-          </a>
-          <a routerLink="/trade-maintenance"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            🗄️ Gestão de Trades
-          </a>
-          <a routerLink="/partials"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            📊 Parciais
-          </a>
-          <a routerLink="/risk"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            🛡️ Risco
-          </a>
-          <a routerLink="/evolution"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            📈 Evolução
-          </a>
-          <a routerLink="/achievements"
-             routerLinkActive="active"
-             class="nav-link px-3 py-2 rounded-md text-sm font-medium">
-            🏆 Conquistas
-          </a>
-        </div>
-      </div>
+    <!-- Gerenciamento de Risco promovido -->
+  <a routerLink="/risk" routerLinkActive="active"
+     class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+    🛡️ Gerenciamento de Risco
+  </a>
 
-      <div class="flex items-center">
-        <a routerLink="/logout"
-           class="nav-link px-3 py-2 rounded-md text-sm font-medium text-bad hover:bg-bad/20">
-          🚪 Logout
-        </a>
+  <a routerLink="/evolution" routerLinkActive="active"
+     class="nav-link px-3 py-2 rounded-md text-sm font-medium">
+    📈 Evolução
+  </a>
+
+
+
+
+  <a routerLink="/quest" routerLinkActive="active"
+   class="nav-link px-3 py-2 rounded-md text-sm font-medium"
+   (click)="showDropdown = false">
+  🎮 TraderQuest
+</a>
+
+
+  <!-- Dropdown Ferramentas por último -->
+<div class="dropdown relative"
+     (mouseenter)="showDropdown = true"
+     (mouseleave)="showDropdown = false">
+  <button class="nav-link px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1"
+          [class.active]="isToolsRouteActive()"
+          (click)="showDropdown = !showDropdown">
+    <span>🛠️ Ferramentas</span>
+    <svg class="w-4 h-4 transition-transform duration-200"
+         [class.rotate-180]="showDropdown" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  </button>
+
+  <div *ngIf="showDropdown"
+       class="dropdown-menu absolute right-0 top-full bg-card border border-edge rounded-lg shadow-xl min-w-[220px] z-50"
+       (mouseenter)="showDropdown = true"
+       (mouseleave)="showDropdown = false">
+    <a routerLink="/trade-maintenance" routerLinkActive="active"
+       class="dropdown-item block px-4 py-3 hover:bg-edge/20 transition-all text-sm"
+       (click)="showDropdown = false">
+      🗄️ Gestão de Trades
+    </a>
+    <a routerLink="/partials" routerLinkActive="active"
+       class="dropdown-item block px-4 py-3 hover:bg-edge/20 transition-all text-sm"
+       (click)="showDropdown = false">
+      📊 Análise de Parciais
+    </a>
+  </div>
+</div>
+</div>
       </div>
     </div>
   </div>
 </nav>
+
+
+
+

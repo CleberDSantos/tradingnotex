@@ -10,12 +10,7 @@ import { AchievementsComponent } from '../achievements/achievements';
 
 declare var echarts: any;
 
-interface Alert {
-  type: 'good' | 'bad' | 'accent';
-  icon: string;
-  title: string;
-  msg: string;
-}
+
 
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
@@ -41,9 +36,7 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   currentPage = 0;
   pageSize = 20;
 
-  // Alertas
-  alerts: Alert[] = [];
-  showAlerts = false;
+
 
   // KPIs
   kpis = {
@@ -115,7 +108,7 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.loadDashboardData();
-    this.seedAlerts();
+
   }
 
   ngAfterViewInit() {
@@ -274,37 +267,8 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  toggleAlerts() {
-    this.showAlerts = !this.showAlerts;
-    if (this.showAlerts) {
-      setTimeout(() => {
-        this.showAlerts = false;
-      }, 6000);
-    }
-  }
 
-  seedAlerts() {
-    this.alerts = [
-      {
-        type: 'bad',
-        icon: '⚠️',
-        title: 'Padrão de Ganância Detectado',
-        msg: 'Você devolveu lucros em <strong>3 dos últimos 5 trades</strong> após atingir a meta.'
-      },
-      {
-        type: 'accent',
-        icon: '⏰',
-        title: 'Overtrading Alert',
-        msg: 'Média de <strong>8 trades/dia</strong> esta semana. Seu ideal é 4-5.'
-      },
-      {
-        type: 'good',
-        icon: '✅',
-        title: 'Melhoria Detectada!',
-        msg: 'Win rate aumentou <strong>15%</strong> após implementar stop loss fixo.'
-      }
-    ];
-  }
+
 
  applyFilters() {
     this.currentPage = 0;
@@ -535,19 +499,9 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
           return;
         }
 
-        // Sucesso: recarregar dashboard e notificar
-        this.alerts.unshift({
-          type: 'good',
-          icon: '✅',
-          title: 'Importação concluída',
-          msg: `Foram importados ${normalizedTrades.length} trades (${name || 'arquivo local'}).`
-        });
         // atualizar lista local e gráficos
         this.loadDashboardData();
-        // esconder alerta após alguns segundos
-        setTimeout(() => {
-          this.alerts.shift();
-        }, 5000);
+
       },
       error: (err) => {
         console.error('Erro na importação:', err);
