@@ -114,7 +114,10 @@ namespace TradingNoteX.Services.Implementations
                     var execMinStart = TruncToMinuteUtc(executedAt);
                     var execMinEnd = execMinStart.AddMinutes(1);
 
-                    // DEDUPE: já existe trade idêntico?
+                    var eps = 0.005m;              // meia casa de centavo
+                    var plLow = pl2 - eps;
+                    var plHigh = pl2 + eps;
+
                     var dupFilter = Builders<Trade>.Filter.And(
                         Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
                         Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, execMinStart),
@@ -122,8 +125,8 @@ namespace TradingNoteX.Services.Implementations
                         Builders<Trade>.Filter.Eq(t => t.Instrument, instr),
                         Builders<Trade>.Filter.Eq(t => t.Side, side),
                         Builders<Trade>.Filter.Eq(t => t.TradeStatus, status),
-                        // comparação de P/L com arredondamento para 2 casas
-                        Builders<Trade>.Filter.Where(t => Round2(t.RealizedPLEUR) == pl2)
+                        Builders<Trade>.Filter.Gte(t => t.RealizedPLEUR, plLow),
+                        Builders<Trade>.Filter.Lt(t => t.RealizedPLEUR, plHigh)
                     );
 
                     var alreadyExists = await _trades.Find(dupFilter).Limit(1).AnyAsync();
