@@ -11,9 +11,80 @@
     </div>
     <div>
       <div class="text-xs muted mb-1">Selecionar dia</div>
-      <select [(ngModel)]="riskData.selectedDay" class="w-full bg-blacker border border-edge rounded px-3 py-2">
-        <option *ngFor="let t of trades" [value]="t.executedAtUTC | date:'yyyy-MM-dd'">{{ t.executedAtUTC | date:'yyyy-MM-dd' }}</option>
-      </select>
+  <div class="relative">
+  <!-- Botão/trigger do datepicker -->
+  <button
+    #pickerBtn
+    type="button"
+    (click)="toggleCalendar($event)"
+    class="w-full bg-blacker border border-edge rounded px-3 py-2 flex items-center justify-between"
+  >
+    <span class="truncate">
+      {{ riskData.selectedDay || 'Todos' }}
+    </span>
+    <span class="flex items-center gap-2">
+      <span
+        *ngIf="riskData.selectedDay"
+        class="inline-block w-2.5 h-2.5 rounded-full"
+        [ngClass]="{
+          'bg-good': dayStatusMap.get(riskData.selectedDay) === 'gain',
+          'bg-bad' : dayStatusMap.get(riskData.selectedDay) === 'loss',
+          'bg-gray-500': dayStatusMap.get(riskData.selectedDay) === 'neutral'
+        }"
+      ></span>
+      ▼
+    </span>
+  </button>
+
+  <!-- Painel do calendário ABSOLUTE -->
+  <div
+    #calendarPanel
+    *ngIf="calendarOpen"
+    class="absolute left-0 mt-2 z-50 w-[292px] rounded-lg border border-edge bg-blacker shadow-xl p-3"
+  >
+    <div class="flex items-center justify-between mb-2">
+      <button class="px-2 py-1 border border-edge rounded" (click)="prevMonth()">◀</button>
+      <div class="text-sm">{{ currentMonth | date:'LLLL yyyy' }}</div>
+      <button class="px-2 py-1 border border-edge rounded" (click)="nextMonth()">▶</button>
+    </div>
+
+    <div class="grid grid-cols-7 gap-1 text-center text-xs muted mb-1">
+      <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-1">
+      <button
+        *ngFor="let d of calendarDays"
+        class="py-2 rounded border transition hover:border-cyanx/50"
+        [disabled]="!d.inMonth"
+        [ngClass]="{
+          'opacity-40 cursor-not-allowed': !d.inMonth,
+          'border-good bg-good/10': d.status==='gain' && d.inMonth,
+          'border-bad  bg-bad/10':  d.status==='loss' && d.inMonth,
+          'border-edge': d.status==='neutral' || !d.inMonth,
+          'ring-2 ring-cyanx': riskData.selectedDay === d.dateStr
+        }"
+        (click)="selectCalendarDay(d.dateStr)"
+      >
+        <span class="text-sm">{{ d.dayNum }}</span>
+      </button>
+    </div>
+
+    <div class="text-xs muted mt-3 flex items-center gap-3">
+      <span>Legenda:</span>
+      <span class="text-good">🟢 Gain</span>
+      <span class="text-bad">🔴 Loss</span>
+      <span>⚪ Neutro</span>
+      <button
+        class="ml-auto px-2 py-1 border border-edge rounded hover:border-cyanx/50"
+        (click)="selectAllDays()"
+      >
+        Todos
+      </button>
+    </div>
+  </div>
+</div>
+
     </div>
     <div class="flex gap-2">
       <button (click)="applyFilters()" class="px-4 py-2 rounded bg-good/20 hover:bg-good/30 border border-good/50">✅ Aplicar</button>

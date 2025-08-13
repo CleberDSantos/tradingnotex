@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, HostListener } from '@angular/core';
 import { RiskService } from '../services/risk.service';
 import { TradeService } from '../services/trade.service';
 import { FormsModule } from '@angular/forms';
@@ -27,6 +27,15 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     lossDays: 0,
     compliantDays: 0
   };
+
+  uniqueDays: Array<{ value: string; label: string; status: 'gain'|'loss'|'neutral' }> = [];
+  dayStatusMap = new Map<string, 'gain'|'loss'|'neutral'>();
+  private toDayStr(d: Date) { return d.toISOString().split('T')[0]; }
+  calendarOpen = false;
+  currentMonth = new Date();
+  @ViewChild('calendarPanel') calendarPanel!: ElementRef<HTMLDivElement>;
+  @ViewChild('pickerBtn') pickerBtn!: ElementRef<HTMLButtonElement>;
+  calendarDays: Array<{ dateStr: string; dayNum: number; inMonth: boolean; status: 'gain'|'loss'|'neutral'|null }> = [];
 
   trades: any[] = [];
 
@@ -61,8 +70,8 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {
     // Definir data padrão como hoje
     const today = new Date();
-    this.dayRiskData.day = today.toISOString().split('T')[0];
-    this.riskData.selectedDay = this.dayRiskData.day;
+    this.dayRiskData.day = '';
+    this.riskData.selectedDay = '';
 
     // Definir range padrão como última semana
     const endDate = new Date();
@@ -75,6 +84,8 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.loadInitialData();
+      this.buildCalendar();
+       this.applyFilters();
   }
 
   ngAfterViewInit() {
@@ -96,6 +107,7 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+
   private loadInitialData() {
     // Carregar trades para popular o select de dias
     this.loadTrades();
@@ -104,32 +116,144 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     this.evaluateRangeRisk();
   }
 
-  private loadTrades() {
-    this.tradeService.list({ Limit: 100, OrderBy: '-executedAtUTC' })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.trades = response.results || [];
+private loadTrades() {
+  this.tradeService.list({ Limit: 1000, OrderBy: '-executedAtUTC' })
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.trades = response.results || [];
+        this.buildUniqueDays(this.trades);
 
-          // Se temos trades, selecionar o dia do primeiro trade
-          if (this.trades.length > 0) {
-            const firstTradeDate = new Date(this.trades[0].executedAtUTC);
-            this.riskData.selectedDay = firstTradeDate.toISOString().split('T')[0];
-            this.dayRiskData.day = this.riskData.selectedDay;
-
-            // Avaliar risco do dia selecionado
-            this.evaluateDayRisk();
-          }
-        },
-        error: (error) => {
-          console.error('Erro ao carregar trades:', error);
+        if (this.trades.length) {
+          const sorted = [...this.trades].sort(
+            (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
+          );
+          this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
+          this.rangeRiskData.end   = sorted.at(-1)!.executedAtUTC.split('T')[0];
         }
-      });
+
+        if (this.riskData.selectedDay) {
+          this.evaluateDayRisk();
+        }
+        this.evaluateRangeRisk();
+        this.buildCalendar();
+      },
+      error: (error) => console.error('Erro ao carregar trades:', error)
+    });
+}
+
+
+
+ toggleCalendar(e: MouseEvent) {
+    e.stopPropagation();
+    this.calendarOpen = !this.calendarOpen;
+
+    if (this.calendarOpen) {
+    // se tiver um dia selecionado, mostre o mês dele
+    if (this.riskData.selectedDay) {
+      const sd = new Date(this.riskData.selectedDay);
+      this.currentMonth = new Date(sd.getFullYear(), sd.getMonth(), 1);
+    }
+    this.buildCalendar(); // <--- força refresh com o dayStatusMap atual
+  }
   }
 
-  private initCharts() {
-    this.initDailyComparisonChart();
-    this.initIntradayChart();
+  selectCalendarDay(d: string) {
+    this.riskData.selectedDay = d;
+    this.calendarOpen = false;
+    this.applyFilters();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocClick(ev: MouseEvent) {
+    if (!this.calendarOpen) return;
+    const panel = this.calendarPanel?.nativeElement;
+    const btn = this.pickerBtn?.nativeElement;
+    const target = ev.target as Node;
+    if (panel && btn && !panel.contains(target) && !btn.contains(target)) {
+      this.calendarOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEsc() { this.calendarOpen = false; }
+
+
+
+  prevMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()-1, 1); this.buildCalendar(); }
+nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()+1, 1); this.buildCalendar(); }
+
+
+  private buildCalendar() {
+  const year = this.currentMonth.getFullYear();
+  const month = this.currentMonth.getMonth();
+  const first = new Date(year, month, 1);
+  const startWeekDay = first.getDay(); // 0=Dom
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const cells: typeof this.calendarDays = [];
+
+  // dias do mês anterior para preencher grade
+  for (let i = 0; i < startWeekDay; i++) {
+    const d = new Date(year, month, -i);
+    const ds = this.toDayStr(d);
+    cells.unshift({ dateStr: ds, dayNum: d.getDate(), inMonth: false, status: null });
+  }
+
+  // dias do mês atual
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = this.toDayStr(new Date(year, month, d));
+    const status = this.dayStatusMap.get(dateStr) ?? 'neutral';
+    cells.push({ dateStr, dayNum: d, inMonth: true, status });
+  }
+
+  // completar até múltiplo de 7
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1];
+    const nextDate = new Date(new Date(last.dateStr).getTime() + 24*3600*1000);
+    const ds = this.toDayStr(nextDate);
+    cells.push({ dateStr: ds, dayNum: nextDate.getDate(), inMonth: false, status: null });
+  }
+
+  this.calendarDays = cells;
+}
+
+  private buildUniqueDays(trades: any[]) {
+  const byDay = new Map<string, number>();
+  for (const t of trades) {
+    const day = this.toDayStr(new Date(t.executedAtUTC));
+    byDay.set(day, (byDay.get(day) ?? 0) + (t.realizedPLEUR ?? 0));
+  }
+  // status e lista ordenada (desc)
+  const days = Array.from(byDay.keys()).sort((a,b) => (a<b?1:-1));
+  this.uniqueDays = days.map(d => {
+    const pl = byDay.get(d) ?? 0;
+    const status = pl > 0 ? 'gain' : pl < 0 ? 'loss' : 'neutral';
+    this.dayStatusMap.set(d, status);
+    return { value: d, label: d, status };
+  });
+  // default selecionado
+  if (!this.riskData.selectedDay && this.uniqueDays.length) {
+    this.riskData.selectedDay = '';
+    this.dayRiskData.day = '';
+  }
+
+  this.buildCalendar();
+}
+
+ private initCharts() {
+  this.initDailyComparisonChart();
+  this.initIntradayChart();
+  setTimeout(() => {
+    this.charts.dailyComparison?.resize?.();
+    this.charts.intraday?.resize?.();
+  });
+}
+
+  selectAllDays() {
+    this.riskData.selectedDay = '';
+    this.calendarOpen = false;
+    this.applyFilters();
   }
 
   private initDailyComparisonChart() {
@@ -153,12 +277,7 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
         right: 10,
         textStyle: { color: '#9ca3af' }
       },
-      grid: {
-        top: 50,
-        right: 30,
-        bottom: 40,
-        left: 60
-      },
+          grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' }
@@ -206,12 +325,7 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
         top: 10,
         textStyle: { color: '#e5e7eb', fontSize: 14 }
       },
-      grid: {
-        top: 50,
-        right: 30,
-        bottom: 40,
-        left: 60
-      },
+         grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
       tooltip: {
         trigger: 'axis',
         formatter: (params: any) => {
@@ -416,16 +530,27 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  applyFilters() {
-    // Atualizar avaliações com os novos filtros
-    if (this.riskData.selectedDay) {
-      this.dayRiskData.day = this.riskData.selectedDay;
-      this.evaluateDayRisk();
-    }
+applyFilters() {
+  if (this.riskData.selectedDay) {
+    // dia específico -> intraday
+    this.dayRiskData.day = this.riskData.selectedDay;
+    this.evaluateDayRisk();
+  } else {
+    // "Todos" -> limpa intraday
+    if (this.charts.intraday) this.charts.intraday.clear();
 
-    // Sempre avaliar o range
-    this.evaluateRangeRisk();
+    // range = todo o histórico
+    if (this.trades.length) {
+      const sorted = [...this.trades].sort(
+        (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
+      );
+      this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
+      this.rangeRiskData.end   = sorted.at(-1)!.executedAtUTC.split('T')[0];
+    }
   }
+  this.evaluateRangeRisk();
+  this.buildCalendar(); // atualiza realce/cores
+}
 
   clearFilters() {
     // Resetar dados
@@ -469,6 +594,8 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
       this.charts.intraday.clear();
       this.initIntradayChart();
     }
+
+      this.buildCalendar();
   }
 
   formatCurrency(value: number): string {
