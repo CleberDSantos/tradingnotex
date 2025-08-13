@@ -6,6 +6,7 @@ import { RiskComponent } from './risk/risk';
 import { EvolutionComponent } from './evolution/evolution';
 import { AchievementsComponent } from './achievements/achievements';
 import { TradeDetail } from './trade-detail/trade-detail';
+import { TradeMaintenance } from './trade-maintenance/trade-maintenance';
 import { Logout } from './logout/logout';
 import { authGuard } from './auth-guard';
 
@@ -17,6 +18,7 @@ export const routes: Routes = [
   { path: 'evolution', component: EvolutionComponent, canActivate: [authGuard] },
   { path: 'achievements', component: AchievementsComponent, canActivate: [authGuard] },
   { path: 'trade/:id', component: TradeDetail, canActivate: [authGuard] },
+  { path: 'trade-maintenance', component: TradeMaintenance, canActivate: [authGuard] },
   { path: 'logout', component: Logout },
   { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

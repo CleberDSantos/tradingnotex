@@ -167,72 +167,102 @@ namespace TradingNoteX.Services.Implementations
             {(hasImages ? "4. Observações sobre os gráficos anexados (máximo 2 frases)" : "")}
             
             Mantenha um tom de mentor experiente. Use emojis apropriados (🎯, ✅, ⚠️, 💡).
-            Responda de forma direta e prática, sem introduções desnecessárias.";
+            Responda de forma direta e prática, sem introduções desnecessárias. 
+            quero uma resposta curta e formatada com quebras de linhas de no maximo 1000 caracteres, não responda nada fora do escopo de trading";
         }
 
         private async Task<string> CallOpenAIWithImagesAsync(string prompt, List<CommentAttachment> attachments)
         {
-            if (string.IsNullOrEmpty(_apiKey))
+            if (string.IsNullOrWhiteSpace(_apiKey))
             {
                 _logger.LogWarning("API Key OpenAI não configurada");
                 return GenerateLocalAnalysis("", "", 0, "", 50, false, attachments?.Count ?? 0);
             }
 
-            var messages = new List<object>
+            // Preparar mensagens para o chat completions
+                    var messages = new List<object>
             {
                 new { role = "system", content = SMC_OTE_SYSTEM_PROMPT }
             };
 
-            // Construir mensagem do usuário com imagens
-            var userContent = new List<object> { new { type = "text", text = prompt } };
+            // Construir conteúdo do usuário com prompt e referências a imagens
+            var userContentParts = new List<string> { prompt };
 
             if (attachments != null)
             {
-                foreach (var attachment in attachments.Where(a => a.Type == "image"))
+                foreach (var att in attachments.Where(a => a.Type == "image"))
                 {
-                    userContent.Add(new
+                    var url = att.Data;
+
+                    // Se vier apenas base64 cru, opcionalmente prefixar data URL
+                    if (!string.IsNullOrWhiteSpace(url) &&
+                        !url.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
+                        !url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                     {
-                        type = "image_url",
-                        image_url = new
-                        {
-                            url = attachment.Data,
-                            detail = "high"
-                        }
-                    });
+                        var mime = string.IsNullOrWhiteSpace(att.MimeType) ? "image/png" : att.MimeType;
+                        url = $"data:{mime};base64,{url}";
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        userContentParts.Add($"Imagem: {url}");
+                    }
                 }
             }
 
+            var userContent = string.Join(Environment.NewLine, userContentParts);
             messages.Add(new { role = "user", content = userContent });
 
-            var request = new
+            // Modelo a usar (default gpt-5-nano)
+            var model = _configuration["AI:openai:Model"] ?? "gpt-5-nano";
+
+            // Corpo da API de chat completions
+            var body = new
             {
-                model = _configuration["AI:openai:Model"] ?? "gpt-4-vision-preview",
-                messages = messages,
-                temperature = 0.7,
-                max_tokens = 600
+                model,
+                messages,
+                reasoning_effort = "minimal"
+
             };
 
-            var json = JsonConvert.SerializeObject(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-
-            var response = await _httpClient.PostAsync(
-                "https://api.openai.com/v1/chat/completions",
-                content
-            );
-
-            if (response.IsSuccessStatusCode)
+            string payload;
+            try
             {
-                var responseJson = await response.Content.ReadAsStringAsync();
-                dynamic result = JsonConvert.DeserializeObject(responseJson);
-                return result.choices[0].message.content;
-            }
+                var json = JsonConvert.SerializeObject(body);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _logger.LogError($"OpenAI API error: {response.StatusCode}");
-            return GenerateLocalAnalysis("", "", 0, "", 50, false, attachments?.Count ?? 0);
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+
+                // Endpoint da API de chat completions
+                using var resp = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
+                payload = await resp.Content.ReadAsStringAsync();
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogError("OpenAI {Status}: {Body}", resp.StatusCode, payload);
+                    return GenerateLocalAnalysis("", "", 0, "", 50, false, attachments?.Count ?? 0);
+                }
+
+                dynamic result = JsonConvert.DeserializeObject(payload);
+                // Obter o conteúdo da primeira escolha
+                string answer = (string)(result?.choices?[0]?.message?.content ?? "");
+
+                // Em caso de ausência de conteúdo, tentar fallback
+                if (string.IsNullOrWhiteSpace(answer))
+                {
+                    answer = (string)(result?.choices?[0]?.text ?? "");
+                }
+
+                return answer;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao chamar OpenAI");
+                return GenerateLocalAnalysis("", "", 0, "", 50, false, attachments?.Count ?? 0);
+            }
         }
+
 
         private async Task<string> CallGeminiWithImagesAsync(string prompt, List<CommentAttachment> attachments)
         {

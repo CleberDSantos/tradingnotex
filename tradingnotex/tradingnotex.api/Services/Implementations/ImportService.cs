@@ -1,12 +1,17 @@
+// tradingnotex/tradingnotex.api/Services/Implementations/ImportService.cs
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
-using TradingNoteX.Models.Entities;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
+using TradingNoteX.Models.Entities;
 using TradingNoteX.Models.Settings;
 using TradingNoteX.Services.Interfaces;
 
@@ -16,224 +21,198 @@ namespace TradingNoteX.Services.Implementations
     {
         private readonly IMongoCollection<Import> _imports;
         private readonly IMongoCollection<Trade> _trades;
+        private readonly ILogger<ImportService> _logger;
 
-        public ImportService(IOptions<MongoDbSettings> settings)
+        public ImportService(
+            IOptions<MongoDbSettings> settings,
+            ILogger<ImportService> logger)
         {
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
             _imports = database.GetCollection<Import>(settings.Value.ImportsCollection);
             _trades = database.GetCollection<Trade>(settings.Value.TradesCollection);
+            _logger = logger;
+
+            // Índice (não-único) p/ acelerar a dedupe simples
+            try
+            {
+                var idx = new CreateIndexModel<Trade>(
+                    Builders<Trade>.IndexKeys
+                        .Ascending(t => t.OwnerId)
+                        .Ascending(t => t.ExecutedAtUTC)
+                        .Ascending(t => t.Instrument)
+                        .Ascending(t => t.Side)
+                        .Ascending(t => t.TradeStatus)
+                        .Ascending(t => t.RealizedPLEUR),
+                    new CreateIndexOptions { Name = "ix_dedupe_simple" }
+                );
+                _trades.Indexes.CreateOne(idx);
+            }
+            catch (MongoCommandException)
+            {
+                // ok se já existir
+            }
         }
 
         public async Task<ImportTradesResponse> ImportTradesAsync(ImportTradesRequest request, string userId)
         {
-            var import = new Import
+            try
             {
-                Name = request.Name,
-                StatementDate = !string.IsNullOrEmpty(request.StatementDateISO)
-                    ? DateTime.Parse(request.StatementDateISO)
-                    : null,
-                Source = "t212",
-                Count = request.Trades.Count,
-                OwnerId = userId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                ACL = new Dictionary<string, ACLPermission>
+                if (request.Trades == null || !request.Trades.Any())
+                    throw new InvalidOperationException("Nenhum trade para importar");
+
+                // Parse opcional de StatementDate
+                DateTime? statementDate = null;
+                if (!string.IsNullOrWhiteSpace(request.StatementDateISO) &&
+                    DateTime.TryParse(request.StatementDateISO, null, DateTimeStyles.AdjustToUniversal, out var stmt))
                 {
-                    { userId, new ACLPermission { Read = true, Write = true } }
+                    statementDate = stmt;
                 }
-            };
 
-            await _imports.InsertOneAsync(import);
-
-            var tradesToInsert = new List<Trade>();
-            foreach (var tradeItem in request.Trades)
-            {
-                var trade = new Trade
+                // Cria registro de importação
+                var import = new Import
                 {
-                    ExecutedAtUTC = DateTime.Parse(tradeItem.ExecutedAtUTC),
-                    Instrument = tradeItem.Instrument,
-                    Side = tradeItem.Side.ToLower(),
-                    RealizedPLEUR = tradeItem.RealizedPLEUR,
-                    DurationMin = tradeItem.DurationMin,
-                    Setup = !string.IsNullOrEmpty(tradeItem.Setup) ? tradeItem.Setup : "SMC",
-                    Notes = tradeItem.Notes ?? "",
-                    Tags = tradeItem.Tags ?? new List<string>(),
-                    ImportId = import.ObjectId,
+                    Name = request.Name ?? $"Import_{DateTime.UtcNow:yyyyMMdd_HHmmss}",
+                    StatementDate = statementDate,
+                    Source = "manual",
+                    Count = request.Trades.Count,
                     OwnerId = userId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     ACL = new Dictionary<string, ACLPermission>
                     {
                         { userId, new ACLPermission { Read = true, Write = true } }
-                    },
-
-                    // Novos campos opcionais
-                    OpenPrice = tradeItem.OpenPrice,
-                    ExecPrice = tradeItem.ExecPrice,
-                    Spread = tradeItem.Spread,
-                    OtherFees = tradeItem.OtherFees,
-                    DailyGoalReached = tradeItem.DailyGoalReached ?? false,
-                    DailyLossReached = tradeItem.DailyLossReached ?? false,
-
-                    // Campos com valores padrão
-                    EntryType = 50, // Balanceado por padrão
-                    Greed = false,
-                    YoutubeLink = "",
-                    Comments = new List<Comment>(),
-
-                    // Calcular status inicial
-                    TradeStatus = CalculateInitialStatus(tradeItem.RealizedPLEUR, tradeItem.ExecPrice, null)
+                    }
                 };
 
-                // Se temos ExecPrice mas não OpenPrice, usar execPrice como base
-                if (trade.ExecPrice.HasValue && !trade.OpenPrice.HasValue)
+                await _imports.InsertOneAsync(import);
+
+                var created = 0;
+                var skipped = 0;
+                var tradesToInsert = new List<Trade>(request.Trades.Count);
+
+                foreach (var item in request.Trades)
                 {
-                    // Estimar OpenPrice baseado no lado do trade
-                    if (trade.Side == "buy")
+                    // Validação mínima
+                    if (string.IsNullOrWhiteSpace(item?.Instrument))
                     {
-                        trade.OpenPrice = trade.ExecPrice.Value * 0.9995m; // 0.05% abaixo
+                        _logger.LogWarning("Trade sem instrumento, pulando.");
+                        skipped++;
+                        continue;
                     }
-                    else
+
+                    // Normalizações
+                    if (!TryParseUtc(item.ExecutedAtUTC, out var executedAt))
+                        executedAt = DateTime.UtcNow;
+
+                    var instr = NormInstr(item.Instrument);
+                    var side = NormSide(item.Side);
+                    var status = (item.RealizedPLEUR >= 0m) ? "Vencedor" : "Perdedor";
+                    var pl2 = Round2(item.RealizedPLEUR);
+
+                    // Janela do minuto para comparar (ignora segundos)
+                    var execMinStart = TruncToMinuteUtc(executedAt);
+                    var execMinEnd = execMinStart.AddMinutes(1);
+
+                    // DEDUPE: já existe trade idêntico?
+                    var dupFilter = Builders<Trade>.Filter.And(
+                        Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
+                        Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, execMinStart),
+                        Builders<Trade>.Filter.Lt(t => t.ExecutedAtUTC, execMinEnd),
+                        Builders<Trade>.Filter.Eq(t => t.Instrument, instr),
+                        Builders<Trade>.Filter.Eq(t => t.Side, side),
+                        Builders<Trade>.Filter.Eq(t => t.TradeStatus, status),
+                        // comparação de P/L com arredondamento para 2 casas
+                        Builders<Trade>.Filter.Where(t => Round2(t.RealizedPLEUR) == pl2)
+                    );
+
+                    var alreadyExists = await _trades.Find(dupFilter).Limit(1).AnyAsync();
+                    if (alreadyExists)
                     {
-                        trade.OpenPrice = trade.ExecPrice.Value * 1.0005m; // 0.05% acima
+                        _logger.LogInformation(
+                            "Trade duplicado ignorado: {Time} {Instr} {Side} PL={PL} Status={Status}",
+                            execMinStart, instr, side, pl2.ToString("F2", CultureInfo.InvariantCulture), status
+                        );
+                        skipped++;
+                        continue;
                     }
+
+                    // Mapeia para entidade completa
+                    var trade = new Trade
+                    {
+                        ObjectId = ObjectId.GenerateNewId().ToString(),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        ExecutedAtUTC = executedAt,
+
+                        Instrument = instr,
+                        Side = side,
+                        RealizedPLEUR = item.RealizedPLEUR,
+                        DurationMin = item.DurationMin,
+
+                        Setup = string.IsNullOrWhiteSpace(item.Setup) ? "SMC" : item.Setup.Trim(),
+                        Emotion = new TradeEmotion { Mood = "neutral", Arousal = "calm" },
+
+                        ImportId = import.ObjectId,
+                        OwnerId = userId,
+                        ACL = new Dictionary<string, ACLPermission>
+                        {
+                            { userId, new ACLPermission { Read = true, Write = true } }
+                        },
+
+                        OpenPrice = item.OpenPrice,
+                        ExecPrice = item.ExecPrice,
+                        Spread = item.Spread,
+                        OtherFees = item.OtherFees,
+
+                        EntryType = 50,
+                        Greed = false,
+                        YoutubeLink = null,
+
+                        Comments = new List<Comment>(),
+                        DailyGoalReached = item.DailyGoalReached ?? false,
+                        DailyLossReached = item.DailyLossReached ?? false,
+
+                        TradeStatus = status,
+                        ChartScreenshots = new List<ChartScreenshot>(),
+
+                        Notes = item.Notes,
+                        Tags = item.Tags ?? new List<string>()
+                    };
+
+                    tradesToInsert.Add(trade);
+                    created++;
                 }
 
-                // Calcular spread se temos ambos os preços
-                if (trade.OpenPrice.HasValue && trade.ExecPrice.HasValue)
+                if (tradesToInsert.Any())
+                    await _trades.InsertManyAsync(tradesToInsert);
+
+                // Atualiza a contagem final criada
+                import.Count = created;
+                await _imports.ReplaceOneAsync(i => i.ObjectId == import.ObjectId, import);
+
+                _logger.LogInformation("Importação concluída: {Created} trades criados, {Skipped} pulados", created, skipped);
+
+                return new ImportTradesResponse
                 {
-                    trade.Spread = Math.Abs(trade.ExecPrice.Value - trade.OpenPrice.Value);
-                }
-
-                // Estimar stop e target baseado em P/L se não fornecidos
-                if (trade.ExecPrice.HasValue && trade.RealizedPLEUR != 0)
-                {
-                    var pointValue = 2m; // €2 por ponto para MNQ
-                    var points = Math.Abs(trade.RealizedPLEUR / pointValue);
-
-                    if (trade.Side == "buy")
-                    {
-                        if (trade.RealizedPLEUR > 0)
-                        {
-                            trade.TargetPrice = trade.ExecPrice.Value + points;
-                            trade.StopPrice = trade.ExecPrice.Value - (points * 0.5m);
-                        }
-                        else
-                        {
-                            trade.StopPrice = trade.ExecPrice.Value - points;
-                            trade.TargetPrice = trade.ExecPrice.Value + (points * 2m);
-                        }
-                    }
-                    else // sell
-                    {
-                        if (trade.RealizedPLEUR > 0)
-                        {
-                            trade.TargetPrice = trade.ExecPrice.Value - points;
-                            trade.StopPrice = trade.ExecPrice.Value + (points * 0.5m);
-                        }
-                        else
-                        {
-                            trade.StopPrice = trade.ExecPrice.Value + points;
-                            trade.TargetPrice = trade.ExecPrice.Value - (points * 2m);
-                        }
-                    }
-                }
-
-                tradesToInsert.Add(trade);
+                    ImportId = import.ObjectId,
+                    Created = created,
+                    Skipped = skipped
+                };
             }
-
-            if (tradesToInsert.Any())
+            catch (Exception ex)
             {
-                await _trades.InsertManyAsync(tradesToInsert);
-
-                // Analisar padrões de ganância e loss após importação
-                await AnalyzeImportedTradesPatterns(tradesToInsert, userId);
-            }
-
-            return new ImportTradesResponse
-            {
-                ImportId = import.ObjectId,
-                Created = tradesToInsert.Count,
-                Skipped = 0
-            };
-        }
-
-        private string CalculateInitialStatus(decimal pl, decimal? execPrice, decimal? targetPrice)
-        {
-            if (execPrice.HasValue && targetPrice.HasValue &&
-                Math.Abs(execPrice.Value - targetPrice.Value) < 0.01m)
-            {
-                return "winner"; // Atingiu o alvo
-            }
-
-            return pl >= 0 ? "winner" : "loser";
-        }
-
-        private async Task AnalyzeImportedTradesPatterns(List<Trade> trades, string userId)
-        {
-            // Agrupar trades por dia
-            var tradesByDay = trades.GroupBy(t => t.ExecutedAtUTC.Date)
-                                    .OrderBy(g => g.Key);
-
-            foreach (var dayGroup in tradesByDay)
-            {
-                var dayTrades = dayGroup.OrderBy(t => t.ExecutedAtUTC).ToList();
-                decimal cumulativePL = 0;
-                bool goalReached = false;
-                bool lossReached = false;
-                DateTime? goalReachedTime = null;
-                DateTime? lossReachedTime = null;
-
-                var dailyGoal = 2m; // €2 meta padrão
-                var dailyMaxLoss = 2m; // €2 loss máximo padrão
-
-                foreach (var trade in dayTrades)
-                {
-                    cumulativePL += trade.RealizedPLEUR;
-
-                    // Verificar se atingiu a meta
-                    if (!goalReached && cumulativePL >= dailyGoal)
-                    {
-                        goalReached = true;
-                        goalReachedTime = trade.ExecutedAtUTC;
-                    }
-
-                    // Verificar se atingiu o loss máximo
-                    if (!lossReached && cumulativePL <= -dailyMaxLoss)
-                    {
-                        lossReached = true;
-                        lossReachedTime = trade.ExecutedAtUTC;
-                    }
-
-                    // Marcar trades que ocorreram após atingir a meta (possível ganância)
-                    if (goalReached && trade.ExecutedAtUTC > goalReachedTime)
-                    {
-                        var filter = Builders<Trade>.Filter.Eq(t => t.ObjectId, trade.ObjectId);
-                        var update = Builders<Trade>.Update
-                            .Set(t => t.Greed, true)
-                            .Set(t => t.DailyGoalReached, true);
-                        await _trades.UpdateOneAsync(filter, update);
-                    }
-
-                    // Marcar trades que ocorreram após atingir o loss máximo
-                    if (lossReached && trade.ExecutedAtUTC > lossReachedTime)
-                    {
-                        var filter = Builders<Trade>.Filter.Eq(t => t.ObjectId, trade.ObjectId);
-                        var update = Builders<Trade>.Update
-                            .Set(t => t.DailyLossReached, true);
-                        await _trades.UpdateOneAsync(filter, update);
-                    }
-                }
+                _logger.LogError(ex, "Erro ao importar trades");
+                throw;
             }
         }
 
         public async Task<List<Import>> GetImportsAsync(string userId)
         {
             var filter = Builders<Import>.Filter.Eq(i => i.OwnerId, userId);
-            var sort = Builders<Import>.Sort.Descending(i => i.CreatedAt);
-
-            return await _imports.Find(filter).Sort(sort).ToListAsync();
+            return await _imports.Find(filter)
+                .Sort(Builders<Import>.Sort.Descending(i => i.CreatedAt))
+                .ToListAsync();
         }
 
         public async Task<Import> GetImportByIdAsync(string importId, string userId)
@@ -248,24 +227,53 @@ namespace TradingNoteX.Services.Implementations
 
         public async Task<bool> DeleteImportAsync(string importId, string userId)
         {
-            var filter = Builders<Import>.Filter.And(
+            // Deleta trades relacionados
+            var tradesFilter = Builders<Trade>.Filter.And(
+                Builders<Trade>.Filter.Eq(t => t.ImportId, importId),
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
+            );
+            await _trades.DeleteManyAsync(tradesFilter);
+
+            // Deleta registro de importação
+            var importFilter = Builders<Import>.Filter.And(
                 Builders<Import>.Filter.Eq(i => i.ObjectId, importId),
                 Builders<Import>.Filter.Eq(i => i.OwnerId, userId)
             );
-
-            var result = await _imports.DeleteOneAsync(filter);
-
-            if (result.DeletedCount > 0)
-            {
-                var tradeFilter = Builders<Trade>.Filter.And(
-                    Builders<Trade>.Filter.Eq(t => t.ImportId, importId),
-                    Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
-                );
-
-                await _trades.DeleteManyAsync(tradeFilter);
-            }
+            var result = await _imports.DeleteOneAsync(importFilter);
 
             return result.DeletedCount > 0;
         }
+
+        // ===================== Helpers =====================
+
+        private static bool TryParseUtc(string value, out DateTime dtUtc)
+        {
+            dtUtc = default;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            if (DateTime.TryParse(value, null, DateTimeStyles.AdjustToUniversal, out var dt))
+            {
+                if (dt.Kind != DateTimeKind.Utc) dt = dt.ToUniversalTime();
+                return (dtUtc = dt) != default;
+            }
+            return false;
+        }
+
+        private static DateTime TruncToMinuteUtc(DateTime dt)
+        {
+            var utc = dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime();
+            return new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, 0, DateTimeKind.Utc);
+        }
+
+        private static string NormInstr(string s) => (s ?? "").Trim().ToUpperInvariant();
+
+        private static string NormSide(string side)
+        {
+            var s = (side ?? "buy").Trim().ToLowerInvariant();
+            return (s == "buy" || s == "sell") ? s : "buy";
+        }
+
+        private static decimal Round2(decimal v) =>
+            Math.Round(v, 2, MidpointRounding.AwayFromZero);
     }
 }

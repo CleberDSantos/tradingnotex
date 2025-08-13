@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using tradingnotex.api.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
@@ -69,7 +70,7 @@ namespace TradingNoteX.Controllers
         }
         
         [HttpPost]
-        public async Task<IActionResult> CreateTrade([FromBody] Trade trade)
+        public async Task<IActionResult> CreateTrade([FromBody] CreateTradeRequest trade)
         {
             try
             {

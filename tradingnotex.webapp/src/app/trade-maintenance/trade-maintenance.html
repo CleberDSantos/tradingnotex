@@ -1,0 +1,365 @@
+<!-- tradingnotex.webapp/src/app/trade-maintenance/trade-maintenance.html -->
+<div class="max-w-7xl mx-auto p-4 space-y-6">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between animate-slide-up">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🗄️</span>
+      <div>
+        <h1 class="text-2xl font-bold">Gestão de Trades</h1>
+        <p class="text-sm text-gray-400">Área de manutenção e importação de registros</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-gray-400">
+      <span class="chip">{{ totalTrades }} trades no sistema</span>
+    </div>
+  </header>
+
+  <!-- Mensagens de feedback -->
+  <div *ngIf="successMessage" class="bg-good/20 border border-good/50 text-good px-4 py-3 rounded animate-slide-up">
+    ✅ {{ successMessage }}
+  </div>
+
+  <div *ngIf="error" class="bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded animate-slide-up">
+    ⚠️ {{ error }}
+  </div>
+
+  <!-- Seção 1: Formulário manual -->
+  <section class="card p-6 space-y-4 animate-slide-up">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold flex items-center gap-2">
+        <span>➕</span> Cadastrar Trade Manualmente
+      </h2>
+      <div class="flex gap-2">
+        <button (click)="clearForm()"
+                class="px-3 py-2 rounded border border-edge hover:bg-edge transition">
+          🔄 Limpar
+        </button>
+        <button (click)="saveTrade()"
+                [disabled]="loading"
+                class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50 transition disabled:opacity-50">
+          💾 Salvar Trade
+        </button>
+      </div>
+    </div>
+
+    <!-- Campos do formulário -->
+    <div class="grid md:grid-cols-4 gap-4">
+      <!-- Linha 1 -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Data/Hora</label>
+        <input [(ngModel)]="newTrade.executedAtUTC"
+               type="datetime-local"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Instrumento *</label>
+        <input [(ngModel)]="newTrade.instrument"
+               type="text"
+               placeholder="Ex: TECH100, AAPL"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Side</label>
+        <select [(ngModel)]="newTrade.side" class="input text-sm">
+          <option value="buy">📈 BUY</option>
+          <option value="sell">📉 SELL</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">P/L (€)</label>
+        <input [(ngModel)]="newTrade.realizedPLEUR"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+
+      <!-- Linha 2 -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Duração (min)</label>
+        <input [(ngModel)]="newTrade.durationMin"
+               type="number"
+               placeholder="0"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Setup</label>
+        <select [(ngModel)]="newTrade.setup" class="input text-sm">
+          <option value="SMC">SMC</option>
+          <option value="OTE">OTE</option>
+          <option value="Rompimento">Rompimento</option>
+          <option value="Reversão">Reversão</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Status</label>
+        <select [(ngModel)]="newTrade.tradeStatus" class="input text-sm">
+          <option value="Vencedor">✅ Vencedor</option>
+          <option value="Proteção">🛡️ Proteção</option>
+          <option value="Perdedor">❌ Perdedor</option>
+          <option value="Aberto">⏳ Aberto</option>
+        </select>
+      </div>
+
+      <!-- Linha 3 - Preços -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Preço Abertura</label>
+        <input [(ngModel)]="newTrade.openPrice"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Preço Execução</label>
+        <input [(ngModel)]="newTrade.execPrice"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Stop Loss</label>
+        <input [(ngModel)]="newTrade.stopPrice"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Take Profit</label>
+        <input [(ngModel)]="newTrade.targetPrice"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+
+      <!-- Linha 4 - Custos e Flags -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Spread</label>
+        <input [(ngModel)]="newTrade.spread"
+               type="number"
+               step="0.0001"
+               placeholder="0.0000"
+               class="input text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Outras Taxas</label>
+        <input [(ngModel)]="newTrade.otherFees"
+               type="number"
+               step="0.01"
+               placeholder="0.00"
+               class="input text-sm" />
+      </div>
+      <div class="md:col-span-2 flex items-center gap-6 pt-6">
+        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input [(ngModel)]="newTrade.dailyGoalReached"
+                 type="checkbox"
+                 class="accent-good">
+          <span>🎯 Meta diária atingida</span>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input [(ngModel)]="newTrade.dailyLossReached"
+                 type="checkbox"
+                 class="accent-bad">
+          <span>⚠️ Loss diário atingido</span>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input [(ngModel)]="newTrade.greed"
+                 type="checkbox"
+                 class="accent-accent">
+          <span>💰 Ganância detectada</span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção 2: Importação -->
+  <section class="card p-6 space-y-4 animate-slide-up" style="animation-delay: 0.05s">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold flex items-center gap-2">
+        <span>📥</span> Importação de Arquivo
+      </h2>
+      <div class="text-xs text-gray-400">
+        Formatos aceitos: CSV, JSON
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 items-end">
+      <div class="md:col-span-2">
+        <label class="block text-sm text-gray-400 mb-2">Selecione o arquivo</label>
+        <div class="flex items-center gap-3">
+          <input type="file"
+                 (change)="onFileSelected($event)"
+                 accept=".csv,.json,text/csv,application/json"
+                 class="hidden"
+                 #fileInput />
+          <button (click)="fileInput.click()"
+                  class="px-4 py-2 rounded border border-edge hover:bg-edge transition">
+            📁 Selecionar Arquivo
+          </button>
+          <span class="text-sm text-gray-400" *ngIf="selectedFile">
+            {{ selectedFile.name }}
+          </span>
+          <span class="text-sm text-gray-500" *ngIf="!selectedFile">
+            Nenhum arquivo selecionado
+          </span>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button (click)="importFile()"
+                [disabled]="!selectedFile || importing"
+                class="px-4 py-2 rounded bg-gradient-to-r from-cyanx/20 to-cyanx/30 hover:from-cyanx/30 hover:to-cyanx/40 border border-cyanx/50 transition disabled:opacity-50">
+          <span *ngIf="!importing">📤 Importar</span>
+          <span *ngIf="importing">⏳ Importando...</span>
+        </button>
+      </div>
+    </div>
+
+  <div class="bg-edge/20 rounded p-3 text-xs text-gray-400">
+  <div class="font-semibold mb-1">ℹ️ Formato esperado:</div>
+  <div class="font-mono text-[10px] opacity-75">
+    CSV: executedAtUTC, instrument, side, realizedPLEUR, durationMin, setup, ...<br>
+    JSON: {{ '{' }} "trades": [{{ '{' }} "executedAtUTC": "...", "instrument": "...", ... {{ '}' }}] {{ '}' }}
+  </div>
+</div>
+  </section>
+
+  <!-- Seção 3: Listagem com paginação -->
+  <section class="card p-6 space-y-4 animate-slide-up" style="animation-delay: 0.1s">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold flex items-center gap-2">
+        <span>📋</span> Trades Cadastrados
+      </h2>
+      <div class="flex items-center gap-2">
+        <button (click)="deleteSelected()"
+                [disabled]="selectedTrades.size === 0"
+                class="px-3 py-2 rounded border border-bad text-bad hover:bg-bad/10 transition disabled:opacity-50">
+          🗑️ Excluir Selecionados  {{ selectedTrades.size }}
+        </button>
+        <button (click)="deleteAll()"
+                class="px-3 py-2 rounded bg-bad/10 border border-bad text-bad hover:bg-bad/20 transition">
+          ⚠️ Apagar Todos
+        </button>
+        <select (change)="changePageSize($event)"
+                class="bg-blacker border border-edge rounded px-3 py-2 text-sm">
+          <option value="10">10 por página</option>
+          <option value="25" selected>25 por página</option>
+          <option value="50">50 por página</option>
+          <option value="100">100 por página</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-edge">
+          <tr class="text-gray-400">
+            <th class="p-3 text-center">
+              <input type="checkbox"
+                     (change)="toggleSelectAll($event)"
+                     class="accent-cyanx">
+            </th>
+            <th class="p-3 text-left">Data/Hora</th>
+            <th class="p-3 text-left">Instrumento</th>
+            <th class="p-3 text-center">Side</th>
+            <th class="p-3 text-right">P/L (€)</th>
+            <th class="p-3 text-center">Status</th>
+            <th class="p-3 text-center">Flags</th>
+            <th class="p-3 text-center">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let trade of trades"
+              class="border-b border-edge/50 hover:bg-edge/20 transition">
+            <td class="p-3 text-center">
+              <input type="checkbox"
+                     [checked]="isSelected(trade.objectId)"
+                     (change)="toggleSelect(trade.objectId)"
+                     class="accent-cyanx">
+            </td>
+            <td class="p-3 font-mono text-xs">
+              {{ formatDate(trade.executedAtUTC) }}
+            </td>
+            <td class="p-3 font-semibold">
+              {{ trade.instrument }}
+            </td>
+            <td class="p-3 text-center">
+              <span [ngClass]="getSideClass(trade.side ?? '')">
+                {{ getSideIcon(trade.side ?? '') }} {{ trade.side | uppercase }}
+              </span>
+            </td>
+            <td class="p-3 text-right font-bold" [ngClass]="getPLClass(trade.realizedPLEUR ?? 0)">
+              {{ formatCurrency(trade.realizedPLEUR) }}
+            </td>
+            <td class="p-3 text-center">
+              <span class="px-2 py-1 rounded text-xs" [ngClass]="getStatusClass(trade.tradeStatus || '')">
+                {{ trade.tradeStatus || '—' }}
+              </span>
+            </td>
+            <td class="p-3 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <span *ngIf="trade.dailyGoalReached" title="Meta atingida">🎯</span>
+                <span *ngIf="trade.dailyLossReached" title="Loss atingido">⚠️</span>
+                <span *ngIf="trade.greed" title="Ganância">💰</span>
+                <span *ngIf="trade.youtubeLink" title="Tem vídeo">🎥</span>
+              </div>
+            </td>
+            <td class="p-3 text-center">
+              <button (click)="deleteTrade(trade.objectId)"
+                      class="px-2 py-1 rounded border border-bad text-bad hover:bg-bad/10 text-xs transition">
+                Excluir
+              </button>
+            </td>
+          </tr>
+
+          <!-- Mensagem quando não há trades -->
+          <tr *ngIf="trades.length === 0 && !loading">
+            <td colspan="8" class="p-8 text-center text-gray-400">
+              <div class="flex flex-col items-center gap-2">
+                <span class="text-4xl">📭</span>
+                <p>Nenhum trade cadastrado</p>
+                <p class="text-xs">Adicione um trade manualmente ou importe um arquivo</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Loading -->
+          <tr *ngIf="loading">
+            <td colspan="8" class="p-8 text-center">
+              <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyanx"></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginação -->
+    <div class="flex items-center justify-between pt-4">
+      <div class="text-sm text-gray-400">
+        Mostrando {{ trades.length }} de {{ totalTrades }} trades
+      </div>
+      <div class="flex items-center gap-2">
+        <button (click)="previousPage()"
+                [disabled]="!canGoPrevious"
+                class="px-3 py-1 rounded border border-edge hover:bg-edge disabled:opacity-50 transition">
+          ← Anterior
+        </button>
+        <span class="px-3 py-1 text-sm">
+          Página {{ currentPage }} de {{ totalPages }}
+        </span>
+        <button (click)="nextPage()"
+                [disabled]="!canGoNext"
+                class="px-3 py-1 rounded border border-edge hover:bg-edge disabled:opacity-50 transition">
+          Próxima →
+        </button>
+      </div>
+    </div>
+  </section>
+
+</div>

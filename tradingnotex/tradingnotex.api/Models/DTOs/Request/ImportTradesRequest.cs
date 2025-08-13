@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TradingNoteX.Models.Entities;
 
 namespace TradingNoteX.Models.DTOs.Request
 {
@@ -6,7 +7,7 @@ namespace TradingNoteX.Models.DTOs.Request
     {
         public string Name { get; set; }
         public string StatementDateISO { get; set; }
-        public List<TradeImportItem> Trades { get; set; }
+        public List<TradeImportItem> Trades { get; set; } = new List<TradeImportItem>();
     }
 
     public class TradeImportItem

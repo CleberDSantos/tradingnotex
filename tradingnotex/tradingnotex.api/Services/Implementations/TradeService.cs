@@ -1,17 +1,20 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using tradingnotex.api.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
 using TradingNoteX.Models.Settings;
 using TradingNoteX.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace TradingNoteX.Services.Implementations
 {
@@ -20,6 +23,7 @@ namespace TradingNoteX.Services.Implementations
         private readonly IMongoCollection<Trade> _trades;
         private readonly IAIAnalysisService _aiAnalysisService;
         private readonly ILogger<TradeService> _logger;
+        private readonly IMongoCollection<Import> _imports;
 
         public TradeService(
             IOptions<MongoDbSettings> settings,
@@ -31,6 +35,7 @@ namespace TradingNoteX.Services.Implementations
             _trades = database.GetCollection<Trade>(settings.Value.TradesCollection);
             _aiAnalysisService = aiAnalysisService;
             _logger = logger;
+            _imports = database.GetCollection<Import>(settings.Value.ImportsCollection);
         }
 
         public async Task<Trade> UpdateTradeDetailsAsync(string tradeId, string userId, UpdateTradeDetailsRequest request)
@@ -120,23 +125,119 @@ namespace TradingNoteX.Services.Implementations
             return pl >= 0 ? "winner" : "loser";
         }
 
-        public async Task<Trade> CreateTradeAsync(Trade trade, string userId)
+        public async Task<Trade> CreateTradeAsync(CreateTradeRequest request, string userId)
         {
-            trade.OwnerId = userId;
-            trade.CreatedAt = DateTime.UtcNow;
-            trade.UpdatedAt = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(request?.Instrument))
+                throw new ArgumentException("Instrument é obrigatório.");
 
-            // Calcular status inicial
-            trade.TradeStatus = trade.RealizedPLEUR >= 0 ? "winner" : "loser";
+            // Normalizações
+            var executedAt = request.ExecutedAtUTC.Kind == DateTimeKind.Utc
+                ? request.ExecutedAtUTC
+                : request.ExecutedAtUTC.ToUniversalTime();
 
-            trade.ACL = new Dictionary<string, ACLPermission>
+            var instrument = (request.Instrument ?? "").Trim().ToUpperInvariant();
+
+            var side = (request.Side ?? "buy").Trim().ToLowerInvariant();
+            if (side != "buy" && side != "sell") side = "buy";
+
+            var status = !string.IsNullOrWhiteSpace(request.TradeStatus)
+                ? request.TradeStatus.Trim()
+                : (request.RealizedPLEUR >= 0m ? "Vencedor" : "Perdedor");
+
+            // (Opcional) Dedupe simples por trade manual (mesma minute-window, mesmo instrumento/side/PL/status)
+            var execMinStart = new DateTime(executedAt.Year, executedAt.Month, executedAt.Day, executedAt.Hour, executedAt.Minute, 0, DateTimeKind.Utc);
+            var execMinEnd = execMinStart.AddMinutes(1);
+            var pl2 = Math.Round(request.RealizedPLEUR, 2, MidpointRounding.AwayFromZero);
+
+            var eps = 0.005m;              // meia casa de centavo
+            var plLow = pl2 - eps;
+            var plHigh = pl2 + eps;
+
+            var dupFilter = Builders<Trade>.Filter.And(
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
+                Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, execMinStart),
+                Builders<Trade>.Filter.Lt(t => t.ExecutedAtUTC, execMinEnd),
+                Builders<Trade>.Filter.Eq(t => t.Instrument, instrument),
+                Builders<Trade>.Filter.Eq(t => t.Side, side),
+                Builders<Trade>.Filter.Eq(t => t.TradeStatus, status),
+                Builders<Trade>.Filter.Gte(t => t.RealizedPLEUR, plLow),
+                Builders<Trade>.Filter.Lt(t => t.RealizedPLEUR, plHigh)
+            );
+
+            var exists = await _trades.Find(dupFilter).Limit(1).AnyAsync();
+            if (exists)
             {
-                { userId, new ACLPermission { Read = true, Write = true } }
+                _logger.LogInformation("CreateTrade ignorado (duplicado): {Time} {Instr} {Side} PL={PL} {Status}",
+                    execMinStart, instrument, side, pl2.ToString("F2", CultureInfo.InvariantCulture), status);
+                // Pode retornar o registro existente, ou lançar 409. Aqui vou retornar o existente.
+                return await _trades.Find(dupFilter).FirstOrDefaultAsync();
+            }
+
+            // Criar/usar um Import "Manual" para vincular entradas do formulário
+            var import = new Import
+            {
+                Name = $"Manual Form {DateTime.UtcNow:yyyy-MM-dd}",
+                StatementDate = DateTime.UtcNow.Date,
+                Source = "manual-form",
+                Count = 1,
+                OwnerId = userId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ACL = new Dictionary<string, ACLPermission>
+                {
+                    { userId, new ACLPermission { Read = true, Write = true } }
+                }
+            };
+            await _imports.InsertOneAsync(import);
+
+            // Montar entidade completa com defaults para campos "required"
+            var entity = new Trade
+            {
+                ObjectId = ObjectId.GenerateNewId().ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ExecutedAtUTC = executedAt,
+
+                Instrument = instrument,
+                Side = side,
+                RealizedPLEUR = request.RealizedPLEUR,
+                DurationMin = request.DurationMin,
+                Setup = string.IsNullOrWhiteSpace(request.Setup) ? "SMC" : request.Setup.Trim(),
+
+                // Campos obrigatórios que causavam 400:
+                Emotion = new TradeEmotion { Mood = "neutral", Arousal = "calm" },
+                Notes = "",                // default vazio para não quebrar validação
+                YoutubeLink = "",          // idem
+
+                ImportId = import.ObjectId,
+                OwnerId = userId,
+                ACL = new Dictionary<string, ACLPermission>
+                {
+                    { userId, new ACLPermission { Read = true, Write = true } }
+                },
+
+                // Opcionais do formulário
+                OpenPrice = request.OpenPrice,
+                ExecPrice = request.ExecPrice,
+                StopPrice = request.StopPrice,
+                TargetPrice = request.TargetPrice,
+                Spread = request.Spread,
+                OtherFees = request.OtherFees,
+                EntryType = request.EntryType,
+                DailyGoalReached = request.DailyGoalReached,
+                DailyLossReached = request.DailyLossReached,
+                Greed = request.Greed,
+
+                TradeStatus = status,
+
+                Comments = new List<Comment>(),
+                ChartScreenshots = new List<ChartScreenshot>()
             };
 
-            await _trades.InsertOneAsync(trade);
-            return trade;
+            await _trades.InsertOneAsync(entity);
+            return entity;
         }
+    
 
         public async Task<List<Trade>> GetTradesAsync(string userId, TradeFilterRequest filter)
         {

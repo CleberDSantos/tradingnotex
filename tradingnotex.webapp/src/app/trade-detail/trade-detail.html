@@ -222,8 +222,11 @@
     <h2 class="text-xl font-semibold mb-4">💬 Comentários e Análise</h2>
 
     <!-- Lista de comentários -->
-    <div class="space-y-4 mb-6 max-h-96 overflow-y-auto">
-      <div *ngFor="let comment of comments" class="flex gap-3 animate-slide-up">
+    <div
+  #commentsContainer
+  class="space-y-4 mb-6 h-[60vh] overflow-y-auto pr-1"
+>
+        <div *ngFor="let comment of sortedComments; trackBy: trackByCommentId" class="flex gap-3 animate-slide-up">
         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyanx to-accent flex items-center justify-center text-white font-bold">
           U
         </div>
@@ -286,7 +289,7 @@
           <div class="flex-1">
             <!-- Drop zone para arquivos -->
             <div #fileDropZone
-                 class="bg-blacker rounded-lg border-2 border-dashed transition-all duration-200"
+                 class="relative bg-blacker rounded-lg border-2 border-dashed transition-all duration-200"
                  [ngClass]="{
                    'border-cyanx bg-cyanx/5': isDragOver,
                    'border-edge': !isDragOver
@@ -325,12 +328,12 @@
 
               <!-- Textarea principal -->
               <div class="p-3">
-                <textarea #commentTextarea
-                          [(ngModel)]="newCommentText"
-                          [placeholder]="getPlaceholderText()"
-                          class="w-full bg-transparent outline-none resize-none text-sm"
-                          rows="3"
-                          (keydown.ctrl.enter)="postComment()"></textarea>
+              <textarea #commentTextarea
+          [(ngModel)]="newCommentText"
+          [placeholder]="getPlaceholderText()"
+          class="w-full bg-transparent outline-none resize-none text-sm"
+          rows="3"
+          (keydown)="onTextareaKeydown($event)"></textarea>
 
                 <!-- Barra de ferramentas -->
                 <div class="flex justify-between items-center mt-2">

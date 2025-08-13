@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using tradingnotex.api.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
@@ -11,7 +12,7 @@ namespace TradingNoteX.Services.Interfaces
     {
         Task<List<Trade>> GetTradesAsync(string userId, TradeFilterRequest filter);
         Task<Trade> GetTradeByIdAsync(string tradeId, string userId);
-        Task<Trade> CreateTradeAsync(Trade trade, string userId);
+        Task<Trade> CreateTradeAsync(CreateTradeRequest trade, string userId);
         Task<Trade> UpdateTradeAsync(string tradeId, Trade trade, string userId);
         Task<bool> DeleteTradeAsync(string tradeId, string userId);
         Task<KPIsResponse> GetKPIsAsync(string userId, DateTime? startDate, DateTime? endDate);

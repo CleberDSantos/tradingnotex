@@ -26,7 +26,7 @@ interface ChartData {
   standalone: true,
   imports: [FormsModule, NgIf, NgFor, DatePipe, CommonModule],
   templateUrl: './trade-detail.html',
-  styleUrl: './trade-detail.scss'
+  styleUrls: ['./trade-detail.scss']
 })
 export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('commentTextarea') commentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -73,6 +73,7 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
   // Alpha Vantage API Key (deve vir do environment)
   alphaVantageKey = 'MBQUDT2LF5EQF1WQ';
 
+  @ViewChild('commentsContainer') commentsContainer!: ElementRef<HTMLDivElement>;
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -89,7 +90,43 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.setupClipboardListeners();
     this.setupDragAndDrop();
+    setTimeout(() => this.scrollCommentsToBottom(), 0);
   }
+
+   private scrollCommentsToBottom() {
+    const el = this.commentsContainer?.nativeElement;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  onTextareaKeydown(ev: KeyboardEvent) {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') {
+      ev.preventDefault();
+      this.postComment();
+    }
+  }
+
+
+// Converte qualquer valor de createdAt para epoch
+private toEpoch(d?: string): number {
+  if (!d) return 0;
+  const t = new Date(d).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+// Getter: mais antigos em cima, mais recentes embaixo
+get sortedComments(): Comment[] {
+  return [...(this.comments || [])].sort(
+    (a, b) => this.toEpoch(a.createdAt) - this.toEpoch(b.createdAt)
+  );
+}
+
+// Para o *ngFor não re-renderizar tudo à toa
+trackByCommentId(_i: number, c: Comment) {
+  return c.id || this.toEpoch(c.createdAt);
+}
+
+
 
   ngOnDestroy() {
     this.destroy$.next();
@@ -217,14 +254,22 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
         }))
       );
 
-      const comment = await lastValueFrom(this.tradeService.addComment(this.trade.objectId!, {
-        text: this.newCommentText,
-        attachments: attachments
-      }));
+     const newComment = await lastValueFrom(
+  this.tradeService.addComment(this.trade!.objectId!, {
+    text: this.newCommentText,
+    attachments
+  })
+);
 
-      this.comments.unshift(comment);
-      this.newCommentText = '';
-      this.pastedFiles = [];
+// caso a API não retorne, define agora
+if (!newComment.createdAt) {
+  newComment.createdAt = new Date().toISOString();
+}
+
+this.comments.push(newComment);        // entra no fim
+this.newCommentText = '';
+this.pastedFiles = [];
+setTimeout(() => this.scrollCommentsToBottom(), 0);
 
     } catch (error) {
       console.error('Erro ao adicionar comentário:', error);
