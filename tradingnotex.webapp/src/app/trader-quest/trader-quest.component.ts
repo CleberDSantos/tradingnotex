@@ -1,6 +1,6 @@
 import { Component, AfterViewInit, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
+import { QuestService, QuestSummary } from '../services/quest.service';
 type Pillar = 'tech' | 'risk' | 'emotion' | 'discipline';
 
 interface Rank { min: number; max: number; name: string; color: string; icon: string; }
@@ -48,6 +48,10 @@ export class TraderQuestComponent implements OnInit, AfterViewInit, OnDestroy {
     ELITE: { min: 61, max: 80, name: 'Elite Trader', color: '#8b5cf6', icon: '👑' },
     ULTRA: { min: 81, max: 100, name: 'ULTRA Master',color: '#ec4899', icon: '🔥' }
   };
+
+  dailyAnalysisCompleted = 0;  // 0..3
+dailyWinRatePct = 0;         // 0..100
+dailyLossHit = false;
 
   achievements: Achievement[] = [
     // Conhecimento Técnico
@@ -109,13 +113,55 @@ export class TraderQuestComponent implements OnInit, AfterViewInit, OnDestroy {
   private timerId?: any;
   private simulateId?: any;
 
+  constructor(private quest: QuestService) {}
+
   // ======= LIFECYCLE =======
-  ngOnInit(): void {
+ngOnInit(): void {
+    // Carrega tudo da API
+    this.quest.loadSummary().subscribe((s: QuestSummary) => {
+      // Player & Level
+      this.player.name = s.player.name;
+      this.player.level = s.player.level;
+      this.player.totalXP = s.player.totalXP;
+      this.player.currentXP = s.player.currentXP;
+      this.player.requiredXP = s.player.requiredXP;
+
+      // Pilares
+      this.player.techScore = s.player.pillars.tech;
+      this.player.riskScore = s.player.pillars.risk;
+      this.player.emotionScore = s.player.pillars.emotion;
+      this.player.disciplineScore = s.player.pillars.discipline;
+
+      // Stats
+      this.player.totalTrades = s.stats.totalTrades;
+      this.player.winRate = s.stats.winRate;
+      this.player.currentStreak = s.stats.currentStreak;
+      this.player.bestStreak = s.stats.bestStreak;
+      this.player.consistentDays = s.stats.consistentDays;
+
+      // Conquistas
+      this.player.unlockedAchievements = s.achievementsUnlocked;
+
+      this.dailyAnalysisCompleted = s.daily.analysisCompleted;
+    this.dailyWinRatePct = s.daily.winRateToday * 100;
+    this.dailyLossHit = s.daily.dailyLossReached;
+
+
+
+      // Missões diárias (bindings no HTML)
+      this.resetTimer = this.resetTimer; // continua com timer
+      // Se quiser exibir progresso das 3 missões no HTML:
+      //  - s.daily.analysisCompleted (de 3)
+      //  - s.daily.winRateToday (vs 0.60)
+      //  - s.daily.dailyLossReached (✓/✗)
+
+      // Redesenhar personagem quando o level mudar
+      this.drawCharacter(this.player.level);
+    });
+
+    // Timer do reset permanece
     this.updateDailyTimer();
     this.timerId = setInterval(() => this.updateDailyTimer(), 1000);
-
-    // DEMO: simular progresso a cada 3s (remova em produção)
-    this.simulateId = setInterval(() => this.simulateProgress(), 3000);
   }
 
   ngAfterViewInit(): void {
@@ -151,13 +197,11 @@ export class TraderQuestComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getCurrentRank(level: number): Rank {
-    const ranks = Object.values(this.RANKS);
-    for (const rank of ranks) {
-      if (level >= rank.min && level <= rank.max) return rank;
-    }
-    return this.RANKS['START'];
-;
+  for (const r of Object.values(this.RANKS)) {
+    if (level >= r.min && level <= r.max) return r;
   }
+  return this.RANKS['START'];
+}
 
   getBonusLabel(pillar: Pillar, score: number): string {
     switch (pillar) {

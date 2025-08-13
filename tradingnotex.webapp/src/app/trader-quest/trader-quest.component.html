@@ -1,24 +1,28 @@
 <div class="text-gray-100 font-sans animate-fade-in">
   <div class="max-w-7xl mx-auto p-4 space-y-6">
-
     <!-- Header Principal -->
     <header class="animate-slide-up">
-      <h1 class="text-4xl font-black text-gray-100 mb-2">
-        🎮 Trading Journey
-        <span class="text-xl text-gray-400">— Sistema de Evolução</span>
-      </h1>
-      <p class="text-gray-400">Acompanhe sua jornada de trader através de níveis, conquistas e evolução contínua</p>
+      <p class="text-gray-400">
+        Acompanhe sua jornada de trader através de níveis, conquistas e evolução
+        contínua
+      </p>
     </header>
 
     <!-- Painel Principal do Jogador -->
     <section class="card p-6 animate-slide-up" style="animation-delay: 0.1s">
       <div class="grid md:grid-cols-3 gap-6">
-
         <!-- Personagem e Nível -->
         <div class="flex flex-col items-center justify-center">
           <div class="character-container animate-float">
-            <canvas #characterCanvas class="character-sprite" width="64" height="64"></canvas>
-            <div class="level-badge animate-pulse-slow">Lv. <span>{{ player.level }}</span></div>
+            <canvas
+              #characterCanvas
+              class="character-sprite"
+              width="64"
+              height="64"
+            ></canvas>
+            <div class="level-badge animate-pulse-slow">
+              Lv. <span>{{ player.level }}</span>
+            </div>
           </div>
           <h2 class="text-2xl font-bold mt-4 rank-title">
             {{ currentRank.icon }} {{ currentRank.name }}
@@ -46,12 +50,19 @@
             <div class="flex justify-between items-center mb-1">
               <span class="text-sm font-medium flex items-center gap-2">
                 📚 Conhecimento Técnico
-                <span class="text-xs text-gray-400">({{ player.techScore | number:'1.0-2' }}/100)</span>
+                <span class="text-xs text-gray-400"
+                  >({{ player.techScore | number : "1.0-2" }}/100)</span
+                >
               </span>
-              <span class="text-xs text-cyanx">{{ getBonusLabel('tech', player.techScore) }}</span>
+              <span class="text-xs text-cyanx">{{
+                getBonusLabel("tech", player.techScore)
+              }}</span>
             </div>
             <div class="pillar-bar">
-              <div class="pillar-fill bg-gradient-to-r from-purple to-pink" [style.width.%]="player.techScore"></div>
+              <div
+                class="pillar-fill bg-gradient-to-r from-purple to-pink"
+                [style.width.%]="player.techScore"
+              ></div>
             </div>
           </div>
 
@@ -60,12 +71,19 @@
             <div class="flex justify-between items-center mb-1">
               <span class="text-sm font-medium flex items-center gap-2">
                 🛡️ Gestão de Risco
-                <span class="text-xs text-gray-400">({{ player.riskScore | number:'1.0-2' }}/100)</span>
+                <span class="text-xs text-gray-400"
+                  >({{ player.riskScore | number : "1.0-2" }}/100)</span
+                >
               </span>
-              <span class="text-xs text-good">{{ getBonusLabel('risk', player.riskScore) }}</span>
+              <span class="text-xs text-good">{{
+                getBonusLabel("risk", player.riskScore)
+              }}</span>
             </div>
             <div class="pillar-bar">
-              <div class="pillar-fill bg-gradient-to-r from-good to-cyanx" [style.width.%]="player.riskScore"></div>
+              <div
+                class="pillar-fill bg-gradient-to-r from-good to-cyanx"
+                [style.width.%]="player.riskScore"
+              ></div>
             </div>
           </div>
 
@@ -74,12 +92,19 @@
             <div class="flex justify-between items-center mb-1">
               <span class="text-sm font-medium flex items-center gap-2">
                 🧘 Controle Emocional
-                <span class="text-xs text-gray-400">({{ player.emotionScore | number:'1.0-2' }}/100)</span>
+                <span class="text-xs text-gray-400"
+                  >({{ player.emotionScore | number : "1.0-2" }}/100)</span
+                >
               </span>
-              <span class="text-xs text-accent">{{ getBonusLabel('emotion', player.emotionScore) }}</span>
+              <span class="text-xs text-accent">{{
+                getBonusLabel("emotion", player.emotionScore)
+              }}</span>
             </div>
             <div class="pillar-bar">
-              <div class="pillar-fill bg-gradient-to-r from-accent to-yellow-300" [style.width.%]="player.emotionScore"></div>
+              <div
+                class="pillar-fill bg-gradient-to-r from-accent to-yellow-300"
+                [style.width.%]="player.emotionScore"
+              ></div>
             </div>
           </div>
 
@@ -88,20 +113,31 @@
             <div class="flex justify-between items-center mb-1">
               <span class="text-sm font-medium flex items-center gap-2">
                 ⚡ Disciplina
-                <span class="text-xs text-gray-400">({{ player.disciplineScore | number:'1.0-2' }}/100)</span>
+                <span class="text-xs text-gray-400"
+                  >({{ player.disciplineScore | number : "1.0-2" }}/100)</span
+                >
               </span>
-              <span class="text-xs text-pink">{{ getBonusLabel('discipline', player.disciplineScore) }}</span>
+              <span class="text-xs text-pink">{{
+                getBonusLabel("discipline", player.disciplineScore)
+              }}</span>
             </div>
             <div class="pillar-bar">
-              <div class="pillar-fill bg-gradient-to-r from-pink to-bad" [style.width.%]="player.disciplineScore"></div>
+              <div
+                class="pillar-fill bg-gradient-to-r from-pink to-bad"
+                [style.width.%]="player.disciplineScore"
+              ></div>
             </div>
           </div>
 
           <!-- Score Total -->
-          <div class="mt-4 p-3 bg-gradient-to-r from-purple/10 to-pink/10 rounded-lg border border-purple/30">
+          <div
+            class="mt-4 p-3 bg-gradient-to-r from-purple/10 to-pink/10 rounded-lg border border-purple/30"
+          >
             <div class="flex justify-between items-center">
               <span class="text-sm font-medium">⭐ Power Score Total</span>
-              <span class="text-2xl font-bold text-purple">{{ totalPowerScore | number:'1.0-2' }}</span>
+              <span class="text-2xl font-bold text-purple">{{
+                totalPowerScore | number : "1.0-2"
+              }}</span>
             </div>
           </div>
         </div>
@@ -112,22 +148,26 @@
     <section class="card p-4 animate-slide-up" style="animation-delay: 0.15s">
       <h3 class="text-lg font-semibold mb-4">🏆 Progressão de Ranks</h3>
       <div class="relative">
-        <div class="h-16 bg-gradient-to-r from-edge via-purple/20 to-edge rounded-lg relative overflow-hidden">
+        <div
+          class="h-16 bg-gradient-to-r from-edge via-purple/20 to-edge rounded-lg relative overflow-hidden"
+        >
           <div class="milestone-marker" style="left: 20%"></div>
           <div class="milestone-marker" style="left: 40%"></div>
           <div class="milestone-marker" style="left: 60%"></div>
           <div class="milestone-marker" style="left: 80%"></div>
-          <div class="absolute inset-0 bg-gradient-to-r from-purple via-pink to-cyanx opacity-70"
-               [style.width.%]="player.level"
-               style="transition: width 1s ease-out"></div>
+          <div
+            class="absolute inset-0 bg-gradient-to-r from-purple via-pink to-cyanx opacity-70"
+            [style.width.%]="player.level"
+            style="transition: width 1s ease-out"
+          ></div>
         </div>
 
         <div class="flex justify-between mt-2 text-xs">
-          <span class="text-gray-400">Start<br>1-20</span>
-          <span class="text-green-400">Plus<br>21-40</span>
-          <span class="text-blue-400">PRO<br>41-60</span>
-          <span class="text-purple-400">Elite<br>61-80</span>
-          <span class="text-pink-400">ULTRA<br>81-100</span>
+          <span class="text-gray-400">Start<br />1-20</span>
+          <span class="text-green-400">Plus<br />21-40</span>
+          <span class="text-blue-400">PRO<br />41-60</span>
+          <span class="text-purple-400">Elite<br />61-80</span>
+          <span class="text-pink-400">ULTRA<br />81-100</span>
         </div>
       </div>
     </section>
@@ -136,25 +176,35 @@
     <section class="stats-grid animate-slide-up" style="animation-delay: 0.2s">
       <div class="card p-4">
         <div class="text-xs text-gray-400 mb-1">Trades Totais</div>
-        <div class="text-2xl font-bold text-cyanx">{{ player.totalTrades }}</div>
+        <div class="text-2xl font-bold text-cyanx">
+          {{ player.totalTrades }}
+        </div>
         <div class="text-xs text-gray-500 mt-1">+0 esta semana</div>
       </div>
 
       <div class="card p-4">
         <div class="text-xs text-gray-400 mb-1">Taxa de Vitória</div>
-        <div class="text-2xl font-bold text-good">{{ player.winRate | number:'1.0-1' }}%</div>
+        <div class="text-2xl font-bold text-good">
+          {{ player.winRate | number : "1.0-1" }}%
+        </div>
         <div class="text-xs text-gray-500 mt-1">Meta: 60%</div>
       </div>
 
       <div class="card p-4">
         <div class="text-xs text-gray-400 mb-1">Streak Atual</div>
-        <div class="text-2xl font-bold text-accent">{{ player.currentStreak }}</div>
-        <div class="text-xs text-gray-500 mt-1">Melhor: {{ player.bestStreak }}</div>
+        <div class="text-2xl font-bold text-accent">
+          {{ player.currentStreak }}
+        </div>
+        <div class="text-xs text-gray-500 mt-1">
+          Melhor: {{ player.bestStreak }}
+        </div>
       </div>
 
       <div class="card p-4">
         <div class="text-xs text-gray-400 mb-1">Dias Consistente</div>
-        <div class="text-2xl font-bold text-purple">{{ player.consistentDays }}</div>
+        <div class="text-2xl font-bold text-purple">
+          {{ player.consistentDays }}
+        </div>
         <div class="text-xs text-gray-500 mt-1">Seguindo o plano</div>
       </div>
     </section>
@@ -163,18 +213,27 @@
     <section class="animate-slide-up" style="animation-delay: 0.25s">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-semibold">🏅 Conquistas</h3>
-        <span class="text-sm text-gray-400">{{ unlockedCount }}/{{ achievements.length }} desbloqueadas</span>
+        <span class="text-sm text-gray-400"
+          >{{ unlockedCount }}/{{ achievements.length }} desbloqueadas</span
+        >
       </div>
 
       <div class="grid md:grid-cols-4 sm:grid-cols-2 gap-4">
-        <div *ngFor="let a of achievements" class="card achievement-card p-4 text-center"
-             [ngClass]="{ 'unlocked': isUnlocked(a), 'locked': !isUnlocked(a) }">
+        <div
+          *ngFor="let a of achievements"
+          class="card achievement-card p-4 text-center"
+          [ngClass]="{ unlocked: isUnlocked(a), locked: !isUnlocked(a) }"
+        >
           <div class="text-3xl mb-2">{{ a.icon }}</div>
           <h4 class="font-bold text-sm">{{ a.name }}</h4>
           <p class="text-xs text-gray-400 mt-1">{{ a.desc }}</p>
           <div class="mt-2">
-            <span *ngIf="isUnlocked(a)" class="text-xs text-good">✓ Conquistado</span>
-            <span *ngIf="!isUnlocked(a)" class="text-xs text-gray-500">+{{ a.xp }} XP</span>
+            <span *ngIf="isUnlocked(a)" class="text-xs text-good"
+              >✓ Conquistado</span
+            >
+            <span *ngIf="!isUnlocked(a)" class="text-xs text-gray-500"
+              >+{{ a.xp }} XP</span
+            >
           </div>
         </div>
       </div>
@@ -188,45 +247,66 @@
       </div>
 
       <div class="space-y-3">
-        <div class="flex items-center justify-between p-3 bg-edge/30 rounded-lg">
+        <div
+          class="flex items-center justify-between p-3 bg-edge/30 rounded-lg"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">📊</span>
             <div>
               <div class="font-medium">Analista Dedicado</div>
-              <div class="text-xs text-gray-400">Registre 3 trades com análise completa</div>
+              <div class="text-xs text-gray-400">
+                Registre 3 trades com análise completa
+              </div>
             </div>
           </div>
           <div class="text-right">
             <div class="text-sm text-cyanx">+50 XP</div>
-            <div class="text-xs text-gray-400">1/3</div>
+            <div class="text-xs text-gray-400">
+              {{ dailyAnalysisCompleted }}/3
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center justify-between p-3 bg-edge/30 rounded-lg">
+        <div
+          class="flex items-center justify-between p-3 bg-edge/30 rounded-lg"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🎯</span>
             <div>
               <div class="font-medium">Precisão Cirúrgica</div>
-              <div class="text-xs text-gray-400">Mantenha win rate acima de 60% hoje</div>
+              <div class="text-xs text-gray-400">
+                Mantenha win rate acima de 60% hoje
+              </div>
             </div>
           </div>
           <div class="text-right">
             <div class="text-sm text-good">+75 XP</div>
-            <div class="text-xs text-gray-400">0%</div>
+            <div class="text-xs text-gray-400">
+              {{ dailyWinRatePct | number : "1.0-0" }}%
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center justify-between p-3 bg-edge/30 rounded-lg">
+        <div
+          class="flex items-center justify-between p-3 bg-edge/30 rounded-lg"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🛡️</span>
             <div>
               <div class="font-medium">Guardião do Capital</div>
-              <div class="text-xs text-gray-400">Não exceda o limite de perda diário</div>
+              <div class="text-xs text-gray-400">
+                Não exceda o limite de perda diário
+              </div>
             </div>
           </div>
           <div class="text-right">
             <div class="text-sm text-accent">+100 XP</div>
-            <div class="text-xs text-good">✓</div>
+            <div
+              class="text-xs"
+              [ngClass]="dailyLossHit ? 'text-bad' : 'text-good'"
+            >
+              {{ dailyLossHit ? "✗" : "✓" }}
+            </div>
           </div>
         </div>
       </div>
@@ -250,35 +330,58 @@
             <tr class="border-b border-edge/40">
               <td class="py-2">🥇</td>
               <td class="py-2 font-medium">MasterTrader</td>
-              <td class="text-center py-2"><span class="px-2 py-1 rounded bg-gradient-to-r from-pink/20 to-purple/20 text-xs">98</span></td>
+              <td class="text-center py-2">
+                <span
+                  class="px-2 py-1 rounded bg-gradient-to-r from-pink/20 to-purple/20 text-xs"
+                  >98</span
+                >
+              </td>
               <td class="text-center py-2 text-purple font-bold">9,850</td>
               <td class="text-right py-2 text-good">78.5%</td>
             </tr>
             <tr class="border-b border-edge/40">
               <td class="py-2">🥈</td>
               <td class="py-2 font-medium">ProScalper</td>
-              <td class="text-center py-2"><span class="px-2 py-1 rounded bg-gradient-to-r from-purple/20 to-blue/20 text-xs">92</span></td>
+              <td class="text-center py-2">
+                <span
+                  class="px-2 py-1 rounded bg-gradient-to-r from-purple/20 to-blue/20 text-xs"
+                  >92</span
+                >
+              </td>
               <td class="text-center py-2 text-purple font-bold">9,245</td>
               <td class="text-right py-2 text-good">75.2%</td>
             </tr>
             <tr class="border-b border-edge/40">
               <td class="py-2">🥉</td>
               <td class="py-2 font-medium">RiskMaster</td>
-              <td class="text-center py-2"><span class="px-2 py-1 rounded bg-gradient-to-r from-blue/20 to-cyanx/20 text-xs">88</span></td>
+              <td class="text-center py-2">
+                <span
+                  class="px-2 py-1 rounded bg-gradient-to-r from-blue/20 to-cyanx/20 text-xs"
+                  >88</span
+                >
+              </td>
               <td class="text-center py-2 text-purple font-bold">8,890</td>
               <td class="text-right py-2 text-good">72.8%</td>
             </tr>
             <tr class="border-b border-edge/40 bg-purple/10">
               <td class="py-2">15</td>
               <td class="py-2 font-medium">Você</td>
-              <td class="text-center py-2"><span class="px-2 py-1 rounded bg-gradient-to-r from-gray/20 to-gray/20 text-xs">{{ player.level }}</span></td>
-              <td class="text-center py-2 text-purple font-bold">{{ totalPowerScore | number:'1.0-0' }}</td>
-              <td class="text-right py-2">{{ player.winRate | number:'1.0-1' }}%</td>
+              <td class="text-center py-2">
+                <span
+                  class="px-2 py-1 rounded bg-gradient-to-r from-gray/20 to-gray/20 text-xs"
+                  >{{ player.level }}</span
+                >
+              </td>
+              <td class="text-center py-2 text-purple font-bold">
+                {{ totalPowerScore | number : "1.0-0" }}
+              </td>
+              <td class="text-right py-2">
+                {{ player.winRate | number : "1.0-1" }}%
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
-
   </div>
 </div>
