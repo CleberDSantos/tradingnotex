@@ -17,6 +17,7 @@ export interface Trade {
   tags?: string[];
   importId?: string;
   ownerId?: string;
+  accountId?: string; // Nova propriedade para associar com conta
   tradeStatus?: string;
   entryType?: number;
   spread?: number | null;
@@ -52,7 +53,7 @@ export interface Comment {
   id: string;
   author?: string;
   text?: string;
-  screenshot?: string; // mantido para compatibilidade
+  screenshot?: string;
   createdAt?: string;
   aiAnalysis?: string;
   aiAnalysisRendered?: {
@@ -74,6 +75,7 @@ export interface Comment {
 export interface ImportTradesPayload {
   name?: string;
   statementDateISO?: string;
+  accountId?: string; // Nova propriedade para especificar a conta
   trades: Trade[];
 }
 
@@ -86,6 +88,8 @@ export class TradeService {
   constructor(private http: HttpClient) {}
 
   list(params?: {
+    AccountId?: string;
+    Instruments?: string[];
     Instrument?: string;
     StartDate?: Date;
     EndDate?: Date;
@@ -96,7 +100,15 @@ export class TradeService {
     let httpParams = new HttpParams();
 
     if (params) {
-      if (params.Instrument && params.Instrument.trim() !== '' && params.Instrument !== 'ALL') {
+      // Filtro de conta
+      if (params.AccountId) {
+        httpParams = httpParams.set('AccountId', params.AccountId);
+      }
+
+      // Filtro de múltiplos instrumentos
+      if (params.Instruments && params.Instruments.length > 0) {
+        httpParams = httpParams.set('Instruments', params.Instruments.join(','));
+      } else if (params.Instrument && params.Instrument.trim() !== '' && params.Instrument !== 'ALL') {
         httpParams = httpParams.set('Instrument', params.Instrument);
       }
 
@@ -146,10 +158,11 @@ export class TradeService {
     return this.http.delete(`${this.base}/${encodeURIComponent(objectId)}`);
   }
 
-  getKPIs(startDate?: string, endDate?: string): Observable<KPIsResponse> {
+  getKPIs(startDate?: string, endDate?: string, accountId?: string): Observable<KPIsResponse> {
     let params = new HttpParams();
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
+    if (accountId) params = params.set('accountId', accountId);
 
     return this.http.get<KPIsResponse>(`${this.base}/kpis`, { params })
       .pipe(
@@ -168,8 +181,11 @@ export class TradeService {
       );
   }
 
-  getHeatmap(): Observable<HourlyHeatmapResponse> {
-    return this.http.get<HourlyHeatmapResponse>(`${this.base}/heatmap`)
+  getHeatmap(accountId?: string): Observable<HourlyHeatmapResponse> {
+    let params = new HttpParams();
+    if (accountId) params = params.set('accountId', accountId);
+
+    return this.http.get<HourlyHeatmapResponse>(`${this.base}/heatmap`, { params })
       .pipe(
         catchError(error => {
           console.error('Erro ao buscar heatmap:', error);
@@ -182,8 +198,11 @@ export class TradeService {
       );
   }
 
-  getInsights(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.base}/insights`)
+  getInsights(accountId?: string): Observable<string[]> {
+    let params = new HttpParams();
+    if (accountId) params = params.set('accountId', accountId);
+
+    return this.http.get<string[]>(`${this.base}/insights`, { params })
       .pipe(
         catchError(error => {
           console.error('Erro ao buscar insights:', error);
@@ -205,11 +224,10 @@ export class TradeService {
       );
   }
 
-    importTrades(payload: ImportTradesPayload): Observable<any> {
+  importTrades(payload: ImportTradesPayload): Observable<any> {
     const url = environment.apiBaseUrl.replace(/\/+$/, '') + '/api/functions/importTrades';
 
     // Garantir que o payload enviado inclua statementDateISO.
-    // Se não vier preenchido, inferimos a partir do primeiro executedAtUTC disponível.
     let statementDateISO = payload.statementDateISO;
     if (!statementDateISO && payload.trades && payload.trades.length > 0) {
       try {
@@ -221,7 +239,6 @@ export class TradeService {
           .sort((a, b) => a.getTime() - b.getTime());
 
         if (dates.length > 0) {
-          // Use somente a parte de data (YYYY-MM-DD) — compatível com o que o backend costuma esperar
           statementDateISO = dates[0].toISOString().split('T')[0];
         }
       } catch (e) {
@@ -229,19 +246,19 @@ export class TradeService {
       }
     }
 
+    // Adicionar accountId aos trades se especificado
+    const tradesWithAccount = payload.accountId
+      ? payload.trades.map(trade => ({ ...trade, accountId: payload.accountId }))
+      : payload.trades;
+
     const body: ImportTradesPayload = {
       name: payload.name,
       statementDateISO: statementDateISO,
-      trades: payload.trades || []
+      accountId: payload.accountId,
+      trades: tradesWithAccount
     };
 
-    // Log para depuração — veja no console do navegador o JSON enviado
-    try {
-      // eslint-disable-next-line no-console
-      console.log('TradeService.importTrades -> sending payload:', JSON.stringify(body));
-    } catch (e) {
-      // ignore
-    }
+    console.log('TradeService.importTrades -> sending payload:', JSON.stringify(body));
 
     const headers = { 'Content-Type': 'application/json' };
     return this.http.post<any>(url, body, { headers })

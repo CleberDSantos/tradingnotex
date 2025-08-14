@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStateService } from '../services/auth-state.service';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
+import { AuthService } from '../services/auth.service';
 
 interface Alert {
   type: 'good' | 'bad' | 'accent';
@@ -17,30 +18,20 @@ interface Alert {
   styleUrl: './navigation.scss'
 })
 export class Navigation {
-  // Alertas
-  alerts: Alert[] = [];
-  showAlerts = false;
-
-  // Dropdown control
-  showDropdown = false;
+  showToolsDropdown = false;
+  showSettingsDropdown = false;
+  username: string | null = null;
 
   // Tools routes for active state
   private toolsRoutes = ['/trade-maintenance', '/partials'];
+  private settingsRoutes = ['/profile', '/accounts'];
 
   constructor(
     public authStateService: AuthStateService,
+    private authService: AuthService,
     private router: Router
   ) {
-    this.seedAlerts();
-  }
-
-  toggleAlerts() {
-    this.showAlerts = !this.showAlerts;
-    if (this.showAlerts) {
-      setTimeout(() => {
-        this.showAlerts = false;
-      }, 6000);
-    }
+    this.username = localStorage.getItem('username');
   }
 
   // Check if any tools route is active
@@ -48,26 +39,22 @@ export class Navigation {
     return this.toolsRoutes.some(route => this.router.url.startsWith(route));
   }
 
-  seedAlerts() {
-    this.alerts = [
-      {
-        type: 'bad',
-        icon: '⚠️',
-        title: 'Padrão de Ganância Detectado',
-        msg: 'Você devolveu lucros em <strong>3 dos últimos 5 trades</strong> após atingir a meta.'
+  // Check if any settings route is active
+  isSettingsRouteActive(): boolean {
+    return this.settingsRoutes.some(route => this.router.url.startsWith(route));
+  }
+
+  logout() {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
       },
-      {
-        type: 'accent',
-        icon: '⏰',
-        title: 'Overtrading Alert',
-        msg: 'Média de <strong>8 trades/dia</strong> esta semana. Seu ideal é 4-5.'
-      },
-      {
-        type: 'good',
-        icon: '✅',
-        title: 'Melhoria Detectada!',
-        msg: 'Win rate aumentou <strong>15%</strong> após implementar stop loss fixo.'
+      error: (error) => {
+        console.error('Erro ao fazer logout:', error);
+        // Fazer logout local mesmo se houver erro no servidor
+        this.authStateService.setAuthenticated(false);
+        this.router.navigate(['/login']);
       }
-    ];
+    });
   }
 }

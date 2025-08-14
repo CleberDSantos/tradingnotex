@@ -1,365 +1,382 @@
-<!-- tradingnotex.webapp/src/app/trade-maintenance/trade-maintenance.html -->
-<div class="max-w-7xl mx-auto p-4 space-y-6">
-
-  <!-- Header -->
-  <header class="flex items-center justify-between animate-slide-up">
-    <div class="flex items-center gap-3">
-      <span class="text-2xl">🗄️</span>
-      <div>
-        <h1 class="text-2xl font-bold">Gestão de Trades</h1>
-        <p class="text-sm text-gray-400">Área de manutenção e importação de registros</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-2 text-xs text-gray-400">
-      <span class="chip">{{ totalTrades }} trades no sistema</span>
-    </div>
-  </header>
-
-  <!-- Mensagens de feedback -->
-  <div *ngIf="successMessage" class="bg-good/20 border border-good/50 text-good px-4 py-3 rounded animate-slide-up">
-    ✅ {{ successMessage }}
-  </div>
-
-  <div *ngIf="error" class="bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded animate-slide-up">
-    ⚠️ {{ error }}
-  </div>
-
-  <!-- Seção 1: Formulário manual -->
-  <section class="card p-6 space-y-4 animate-slide-up">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold flex items-center gap-2">
-        <span>➕</span> Cadastrar Trade Manualmente
-      </h2>
-      <div class="flex gap-2">
-        <button (click)="clearForm()"
-                class="px-3 py-2 rounded border border-edge hover:bg-edge transition">
-          🔄 Limpar
-        </button>
-        <button (click)="saveTrade()"
-                [disabled]="loading"
-                class="px-4 py-2 rounded bg-gradient-to-r from-good/20 to-good/30 hover:from-good/30 hover:to-good/40 border border-good/50 transition disabled:opacity-50">
-          💾 Salvar Trade
-        </button>
-      </div>
-    </div>
-
-    <!-- Campos do formulário -->
-    <div class="grid md:grid-cols-4 gap-4">
-      <!-- Linha 1 -->
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Data/Hora</label>
-        <input [(ngModel)]="newTrade.executedAtUTC"
-               type="datetime-local"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Instrumento *</label>
-        <input [(ngModel)]="newTrade.instrument"
-               type="text"
-               placeholder="Ex: TECH100, AAPL"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Side</label>
-        <select [(ngModel)]="newTrade.side" class="input text-sm">
-          <option value="buy">📈 BUY</option>
-          <option value="sell">📉 SELL</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">P/L (€)</label>
-        <input [(ngModel)]="newTrade.realizedPLEUR"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-
-      <!-- Linha 2 -->
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Duração (min)</label>
-        <input [(ngModel)]="newTrade.durationMin"
-               type="number"
-               placeholder="0"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Setup</label>
-        <select [(ngModel)]="newTrade.setup" class="input text-sm">
-          <option value="SMC">SMC</option>
-          <option value="OTE">OTE</option>
-          <option value="Rompimento">Rompimento</option>
-          <option value="Reversão">Reversão</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Status</label>
-        <select [(ngModel)]="newTrade.tradeStatus" class="input text-sm">
-          <option value="Vencedor">✅ Vencedor</option>
-          <option value="Proteção">🛡️ Proteção</option>
-          <option value="Perdedor">❌ Perdedor</option>
-          <option value="Aberto">⏳ Aberto</option>
-        </select>
-      </div>
-
-      <!-- Linha 3 - Preços -->
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Preço Abertura</label>
-        <input [(ngModel)]="newTrade.openPrice"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Preço Execução</label>
-        <input [(ngModel)]="newTrade.execPrice"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Stop Loss</label>
-        <input [(ngModel)]="newTrade.stopPrice"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Take Profit</label>
-        <input [(ngModel)]="newTrade.targetPrice"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-
-      <!-- Linha 4 - Custos e Flags -->
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Spread</label>
-        <input [(ngModel)]="newTrade.spread"
-               type="number"
-               step="0.0001"
-               placeholder="0.0000"
-               class="input text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-1">Outras Taxas</label>
-        <input [(ngModel)]="newTrade.otherFees"
-               type="number"
-               step="0.01"
-               placeholder="0.00"
-               class="input text-sm" />
-      </div>
-      <div class="md:col-span-2 flex items-center gap-6 pt-6">
-        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input [(ngModel)]="newTrade.dailyGoalReached"
-                 type="checkbox"
-                 class="accent-good">
-          <span>🎯 Meta diária atingida</span>
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input [(ngModel)]="newTrade.dailyLossReached"
-                 type="checkbox"
-                 class="accent-bad">
-          <span>⚠️ Loss diário atingido</span>
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input [(ngModel)]="newTrade.greed"
-                 type="checkbox"
-                 class="accent-accent">
-          <span>💰 Ganância detectada</span>
-        </label>
-      </div>
-    </div>
-  </section>
-
-  <!-- Seção 2: Importação -->
-  <section class="card p-6 space-y-4 animate-slide-up" style="animation-delay: 0.05s">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold flex items-center gap-2">
-        <span>📥</span> Importação de Arquivo
-      </h2>
-      <div class="text-xs text-gray-400">
-        Formatos aceitos: CSV, JSON
-      </div>
-    </div>
-
-    <div class="grid md:grid-cols-3 gap-4 items-end">
-      <div class="md:col-span-2">
-        <label class="block text-sm text-gray-400 mb-2">Selecione o arquivo</label>
-        <div class="flex items-center gap-3">
-          <input type="file"
-                 (change)="onFileSelected($event)"
-                 accept=".csv,.json,text/csv,application/json"
-                 class="hidden"
-                 #fileInput />
-          <button (click)="fileInput.click()"
-                  class="px-4 py-2 rounded border border-edge hover:bg-edge transition">
-            📁 Selecionar Arquivo
+ <div class="max-w-7xl mx-auto p-6 space-y-6">
+      <!-- Header -->
+      <header class="flex justify-between items-center animate-slide-up">
+        <div>
+          <h1 class="text-2xl font-bold text-white">🗄️ Gestão de Trades</h1>
+          <p class="text-gray-400 text-sm mt-1">Importe, exporte e gerencie seus trades</p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            (click)="exportTrades()"
+            class="px-4 py-2 bg-edge hover:bg-card rounded-lg font-medium transition-all">
+            📥 Exportar
           </button>
-          <span class="text-sm text-gray-400" *ngIf="selectedFile">
-            {{ selectedFile.name }}
-          </span>
-          <span class="text-sm text-gray-500" *ngIf="!selectedFile">
-            Nenhum arquivo selecionado
-          </span>
+          <button
+            (click)="openImportModal()"
+            class="px-4 py-2 bg-gradient-to-r from-cyanx to-accent hover:from-accent hover:to-cyanx rounded-lg font-medium transition-all">
+            📤 Importar Trades
+          </button>
+        </div>
+      </header>
+
+      <!-- Filtros -->
+      <section class="card p-4 animate-slide-up" style="animation-delay: .1s">
+        <h2 class="text-lg font-semibold mb-3">🔍 Filtros</h2>
+        <div class="grid md:grid-cols-5 gap-3">
+          <div>
+            <label class="text-xs muted block mb-1">Conta</label>
+            <select [(ngModel)]="filters.accountId" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+              <option value="">Todas as Contas</option>
+              <option *ngFor="let account of accounts" [value]="account.objectId">
+                {{ account.name }} {{ account.broker ? '(' + account.broker + ')' : '' }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs muted block mb-1">Instrumento</label>
+            <input [(ngModel)]="filters.instrument" type="text" placeholder="ex: TECH100"
+                   class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          </div>
+          <div>
+            <label class="text-xs muted block mb-1">Data Início</label>
+            <input [(ngModel)]="filters.startDate" type="date"
+                   class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          </div>
+          <div>
+            <label class="text-xs muted block mb-1">Data Fim</label>
+            <input [(ngModel)]="filters.endDate" type="date"
+                   class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          </div>
+          <div class="flex gap-2 items-end">
+            <button (click)="applyFilters()"
+                    class="px-4 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">
+              ✅ Aplicar
+            </button>
+            <button (click)="clearFilters()"
+                    class="px-4 py-2 rounded border border-edge hover:bg-card">
+              ❌
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Estatísticas -->
+      <section class="grid grid-cols-2 md:grid-cols-5 gap-4 animate-slide-up" style="animation-delay: .2s">
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-bold text-cyanx">{{ stats.total }}</div>
+          <div class="text-xs text-gray-400 mt-1">Total de Trades</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-bold text-good">{{ stats.wins }}</div>
+          <div class="text-xs text-gray-400 mt-1">Vitórias</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-bold text-bad">{{ stats.losses }}</div>
+          <div class="text-xs text-gray-400 mt-1">Derrotas</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-bold text-accent">{{ stats.accounts }}</div>
+          <div class="text-xs text-gray-400 mt-1">Contas</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-bold" [ngClass]="stats.totalPL >= 0 ? 'text-good' : 'text-bad'">
+            {{ formatCurrency(stats.totalPL) }}
+          </div>
+          <div class="text-xs text-gray-400 mt-1">P/L Total</div>
+        </div>
+      </section>
+
+      <!-- Lista de Trades -->
+      <section class="card p-4 overflow-x-auto animate-slide-up" style="animation-delay: .3s">
+        <h2 class="text-xl font-semibold mb-3">📋 Trades Importados</h2>
+
+        <div *ngIf="selectedTrades.length > 0" class="mb-3 p-3 bg-cyanx/10 border border-cyanx/30 rounded-lg">
+          <span class="text-sm">{{ selectedTrades.length }} trades selecionados</span>
+          <button (click)="deleteSelected()"
+                  class="ml-3 px-3 py-1 bg-bad hover:bg-red-700 rounded text-sm">
+            🗑️ Excluir Selecionados
+          </button>
+        </div>
+
+        <table class="w-full text-sm">
+          <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+            <tr>
+              <th class="p-2">
+                <input type="checkbox" (change)="toggleSelectAll($event)"
+                       [checked]="allSelected" class="rounded border-edge">
+              </th>
+              <th class="text-left p-2">Data/Hora</th>
+              <th class="text-left p-2">Conta</th>
+              <th class="text-left p-2">Instrumento</th>
+              <th class="text-left p-2">Side</th>
+              <th class="text-right p-2">P/L (€)</th>
+              <th class="text-left p-2">Setup</th>
+              <th class="text-center p-2">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let trade of trades" class="hover:bg-edge/20 transition-all">
+              <td class="p-2">
+                <input type="checkbox"
+                       [(ngModel)]="trade.selected"
+                       (change)="updateSelection()"
+                       class="rounded border-edge">
+              </td>
+              <td class="p-2 font-mono text-xs">
+                {{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+              <td class="p-2">
+                <span class="text-xs px-2 py-1 rounded-full bg-edge/30">
+                  {{ getAccountName(trade.accountId) || '—' }}
+                </span>
+              </td>
+              <td class="p-2">
+                <span class="font-semibold text-cyanx">{{ trade.instrument }}</span>
+              </td>
+              <td class="p-2">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                      [ngClass]="trade.side==='buy' ? 'bg-good/20 text-good' : 'bg-bad/20 text-bad'">
+                  {{ trade.side | uppercase }}
+                </span>
+              </td>
+              <td class="p-2 text-right font-bold"
+                  [ngClass]="trade.realizedPLEUR >= 0 ? 'text-good' : 'text-bad'">
+                {{ trade.realizedPLEUR | number:'1.2-2' }}
+              </td>
+              <td class="p-2">
+                <span class="text-xs px-2 py-1 rounded bg-accent/20 text-accent">
+                  {{ trade.setup || '—' }}
+                </span>
+              </td>
+              <td class="p-2 text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <button (click)="editTrade(trade)"
+                          class="p-1 hover:bg-cyanx/20 rounded transition-colors"
+                          title="Editar">
+                    ✏️
+                  </button>
+                  <button (click)="viewDetails(trade)"
+                          class="p-1 hover:bg-cyanx/20 rounded transition-colors"
+                          title="Detalhes">
+                    👁️
+                  </button>
+                  <button (click)="deleteTrade(trade)"
+                          class="p-1 hover:bg-bad/20 rounded transition-colors"
+                          title="Excluir">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="trades.length === 0">
+              <td colspan="8" class="text-center py-8 text-gray-400">
+                <div class="flex flex-col items-center gap-2">
+                  <div class="text-6xl">📊</div>
+                  <p>Nenhum trade encontrado</p>
+                  <p class="text-xs">Importe seus trades para começar</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Paginação -->
+        <div class="flex items-center justify-between mt-4 pt-4 border-t border-edge">
+          <div class="text-sm text-gray-400">
+            Mostrando {{ trades.length }} trades
+          </div>
+          <div class="flex gap-2">
+            <button (click)="loadMoreTrades()"
+                    [disabled]="loading"
+                    class="px-4 py-2 rounded bg-edge hover:bg-card border border-edge transition-all disabled:opacity-50">
+              {{ loading ? 'Carregando...' : 'Carregar mais' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Modal de Importação -->
+      <div *ngIf="showImportModal"
+           class="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+           (click)="closeImportModal()">
+        <div class="bg-card border border-edge rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+             (click)="$event.stopPropagation()">
+          <h2 class="text-xl font-semibold mb-4">📤 Importar Trades</h2>
+
+          <!-- Seleção de Conta -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">
+              Selecione a conta para importação *
+            </label>
+            <select [(ngModel)]="importData.accountId"
+                    class="w-full bg-blacker border border-edge rounded-lg px-3 py-2 focus:border-cyanx focus:outline-none">
+              <option value="">-- Selecione uma conta --</option>
+              <option *ngFor="let account of accounts" [value]="account.objectId">
+                {{ account.name }}
+                <span *ngIf="account.broker">({{ account.broker }})</span>
+                - {{ account.accountType === 'demo' ? 'Demo' : account.accountType === 'prop' ? 'Prop' : 'Real' }}
+              </option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              Os trades importados serão associados a esta conta
+            </p>
+          </div>
+
+          <!-- Nome da Importação -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Nome da importação (opcional)</label>
+            <input [(ngModel)]="importData.name"
+                   type="text"
+                   placeholder="Ex: Trades Janeiro 2025"
+                   class="w-full bg-blacker border border-edge rounded-lg px-3 py-2 focus:border-cyanx focus:outline-none">
+          </div>
+
+          <!-- Upload de Arquivo -->
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Arquivo de trades (JSON ou CSV)</label>
+            <div class="border-2 border-dashed border-edge rounded-lg p-8 text-center hover:border-cyanx/50 transition-colors">
+              <input type="file"
+                     #fileInput
+                     (change)="handleFileInput($event)"
+                     accept=".json,.csv"
+                     class="hidden">
+              <div class="text-6xl mb-3">📁</div>
+              <button (click)="fileInput.click()"
+                      class="px-4 py-2 bg-edge hover:bg-card rounded-lg font-medium transition-all mb-2">
+                Escolher Arquivo
+              </button>
+              <p class="text-xs text-gray-400">ou arraste o arquivo aqui</p>
+
+              <div *ngIf="importData.fileName" class="mt-4 p-3 bg-cyanx/10 rounded-lg">
+                <p class="text-sm">📄 {{ importData.fileName }}</p>
+                <p class="text-xs text-gray-400 mt-1">{{ importData.tradesCount }} trades encontrados</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview dos Trades -->
+          <div *ngIf="importData.preview.length > 0" class="mb-4">
+            <h3 class="text-sm font-semibold mb-2">Preview (primeiros 5 trades)</h3>
+            <div class="bg-blacker rounded-lg p-3 max-h-40 overflow-y-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="text-gray-400">
+                    <th class="text-left">Data</th>
+                    <th class="text-left">Instrumento</th>
+                    <th class="text-left">Side</th>
+                    <th class="text-right">P/L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let trade of importData.preview" class="border-t border-edge">
+                    <td class="py-1">{{ trade.executedAtUTC | date:'dd/MM HH:mm' }}</td>
+                    <td>{{ trade.instrument }}</td>
+                    <td>
+                      <span [ngClass]="trade.side === 'buy' ? 'text-good' : 'text-bad'">
+                        {{ trade.side }}
+                      </span>
+                    </td>
+                    <td class="text-right" [ngClass]="(trade.realizedPLEUR ?? 0) >= 0 ? 'text-good' : 'text-bad'">
+                      {{ (trade.realizedPLEUR ?? 0) | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mensagens de Erro -->
+          <div *ngIf="importError" class="mb-4 p-3 bg-bad/10 border border-bad/30 rounded-lg">
+            <p class="text-sm text-bad">⚠️ {{ importError }}</p>
+          </div>
+
+          <!-- Botões -->
+          <div class="flex gap-3">
+            <button (click)="confirmImport()"
+                    [disabled]="!importData.accountId || importData.trades.length === 0 || importing"
+                    class="flex-1 px-4 py-2 bg-gradient-to-r from-cyanx to-accent hover:from-accent hover:to-cyanx rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ importing ? 'Importando...' : 'Importar Trades' }}
+            </button>
+            <button (click)="closeImportModal()"
+                    class="px-4 py-2 bg-edge hover:bg-card rounded-lg font-medium transition-all">
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
-      <div class="flex gap-2">
-        <button (click)="importFile()"
-                [disabled]="!selectedFile || importing"
-                class="px-4 py-2 rounded bg-gradient-to-r from-cyanx/20 to-cyanx/30 hover:from-cyanx/30 hover:to-cyanx/40 border border-cyanx/50 transition disabled:opacity-50">
-          <span *ngIf="!importing">📤 Importar</span>
-          <span *ngIf="importing">⏳ Importando...</span>
-        </button>
-      </div>
-    </div>
 
-  <div class="bg-edge/20 rounded p-3 text-xs text-gray-400">
-  <div class="font-semibold mb-1">ℹ️ Formato esperado:</div>
-  <div class="font-mono text-[10px] opacity-75">
-    CSV: executedAtUTC, instrument, side, realizedPLEUR, durationMin, setup, ...<br>
-    JSON: {{ '{' }} "trades": [{{ '{' }} "executedAtUTC": "...", "instrument": "...", ... {{ '}' }}] {{ '}' }}
-  </div>
-</div>
-  </section>
+      <!-- Modal de Edição -->
+      <div *ngIf="showEditModal"
+           class="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+           (click)="closeEditModal()">
+        <div class="bg-card border border-edge rounded-xl p-6 w-full max-w-md animate-slide-up"
+             (click)="$event.stopPropagation()">
+          <h2 class="text-xl font-semibold mb-4">✏️ Editar Trade</h2>
 
-  <!-- Seção 3: Listagem com paginação -->
-  <section class="card p-6 space-y-4 animate-slide-up" style="animation-delay: 0.1s">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold flex items-center gap-2">
-        <span>📋</span> Trades Cadastrados
-      </h2>
-      <div class="flex items-center gap-2">
-        <button (click)="deleteSelected()"
-                [disabled]="selectedTrades.size === 0"
-                class="px-3 py-2 rounded border border-bad text-bad hover:bg-bad/10 transition disabled:opacity-50">
-          🗑️ Excluir Selecionados  {{ selectedTrades.size }}
-        </button>
-        <button (click)="deleteAll()"
-                class="px-3 py-2 rounded bg-bad/10 border border-bad text-bad hover:bg-bad/20 transition">
-          ⚠️ Apagar Todos
-        </button>
-        <select (change)="changePageSize($event)"
-                class="bg-blacker border border-edge rounded px-3 py-2 text-sm">
-          <option value="10">10 por página</option>
-          <option value="25" selected>25 por página</option>
-          <option value="50">50 por página</option>
-          <option value="100">100 por página</option>
-        </select>
-      </div>
-    </div>
+          <form class="space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Conta</label>
+              <select [(ngModel)]="editingTrade.accountId" name="accountId"
+                      class="w-full bg-blacker border border-edge rounded-lg px-3 py-2">
+                <option value="">Sem conta</option>
+                <option *ngFor="let account of accounts" [value]="account.objectId">
+                  {{ account.name }}
+                </option>
+              </select>
+            </div>
 
-    <!-- Tabela -->
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-edge">
-          <tr class="text-gray-400">
-            <th class="p-3 text-center">
-              <input type="checkbox"
-                     (change)="toggleSelectAll($event)"
-                     class="accent-cyanx">
-            </th>
-            <th class="p-3 text-left">Data/Hora</th>
-            <th class="p-3 text-left">Instrumento</th>
-            <th class="p-3 text-center">Side</th>
-            <th class="p-3 text-right">P/L (€)</th>
-            <th class="p-3 text-center">Status</th>
-            <th class="p-3 text-center">Flags</th>
-            <th class="p-3 text-center">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let trade of trades"
-              class="border-b border-edge/50 hover:bg-edge/20 transition">
-            <td class="p-3 text-center">
-              <input type="checkbox"
-                     [checked]="isSelected(trade.objectId)"
-                     (change)="toggleSelect(trade.objectId)"
-                     class="accent-cyanx">
-            </td>
-            <td class="p-3 font-mono text-xs">
-              {{ formatDate(trade.executedAtUTC) }}
-            </td>
-            <td class="p-3 font-semibold">
-              {{ trade.instrument }}
-            </td>
-            <td class="p-3 text-center">
-              <span [ngClass]="getSideClass(trade.side ?? '')">
-                {{ getSideIcon(trade.side ?? '') }} {{ trade.side | uppercase }}
-              </span>
-            </td>
-            <td class="p-3 text-right font-bold" [ngClass]="getPLClass(trade.realizedPLEUR ?? 0)">
-              {{ formatCurrency(trade.realizedPLEUR) }}
-            </td>
-            <td class="p-3 text-center">
-              <span class="px-2 py-1 rounded text-xs" [ngClass]="getStatusClass(trade.tradeStatus || '')">
-                {{ trade.tradeStatus || '—' }}
-              </span>
-            </td>
-            <td class="p-3 text-center">
-              <div class="flex items-center justify-center gap-1">
-                <span *ngIf="trade.dailyGoalReached" title="Meta atingida">🎯</span>
-                <span *ngIf="trade.dailyLossReached" title="Loss atingido">⚠️</span>
-                <span *ngIf="trade.greed" title="Ganância">💰</span>
-                <span *ngIf="trade.youtubeLink" title="Tem vídeo">🎥</span>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Instrumento</label>
+              <input [(ngModel)]="editingTrade.instrument" name="instrument"
+                     type="text"
+                     class="w-full bg-blacker border border-edge rounded-lg px-3 py-2">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">Side</label>
+                <select [(ngModel)]="editingTrade.side" name="side"
+                        class="w-full bg-blacker border border-edge rounded-lg px-3 py-2">
+                  <option value="buy">Buy</option>
+                  <option value="sell">Sell</option>
+                </select>
               </div>
-            </td>
-            <td class="p-3 text-center">
-              <button (click)="deleteTrade(trade.objectId)"
-                      class="px-2 py-1 rounded border border-bad text-bad hover:bg-bad/10 text-xs transition">
-                Excluir
-              </button>
-            </td>
-          </tr>
 
-          <!-- Mensagem quando não há trades -->
-          <tr *ngIf="trades.length === 0 && !loading">
-            <td colspan="8" class="p-8 text-center text-gray-400">
-              <div class="flex flex-col items-center gap-2">
-                <span class="text-4xl">📭</span>
-                <p>Nenhum trade cadastrado</p>
-                <p class="text-xs">Adicione um trade manualmente ou importe um arquivo</p>
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">P/L (€)</label>
+                <input [(ngModel)]="editingTrade.realizedPLEUR" name="pl"
+                       type="number" step="0.01"
+                       class="w-full bg-blacker border border-edge rounded-lg px-3 py-2">
               </div>
-            </td>
-          </tr>
+            </div>
 
-          <!-- Loading -->
-          <tr *ngIf="loading">
-            <td colspan="8" class="p-8 text-center">
-              <div class="flex justify-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyanx"></div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Setup</label>
+              <input [(ngModel)]="editingTrade.setup" name="setup"
+                     type="text"
+                     class="w-full bg-blacker border border-edge rounded-lg px-3 py-2">
+            </div>
 
-    <!-- Paginação -->
-    <div class="flex items-center justify-between pt-4">
-      <div class="text-sm text-gray-400">
-        Mostrando {{ trades.length }} de {{ totalTrades }} trades
-      </div>
-      <div class="flex items-center gap-2">
-        <button (click)="previousPage()"
-                [disabled]="!canGoPrevious"
-                class="px-3 py-1 rounded border border-edge hover:bg-edge disabled:opacity-50 transition">
-          ← Anterior
-        </button>
-        <span class="px-3 py-1 text-sm">
-          Página {{ currentPage }} de {{ totalPages }}
-        </span>
-        <button (click)="nextPage()"
-                [disabled]="!canGoNext"
-                class="px-3 py-1 rounded border border-edge hover:bg-edge disabled:opacity-50 transition">
-          Próxima →
-        </button>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Notas</label>
+              <textarea [(ngModel)]="editingTrade.notes" name="notes"
+                        rows="3"
+                        class="w-full bg-blacker border border-edge rounded-lg px-3 py-2 resize-none">
+              </textarea>
+            </div>
+          </form>
+
+          <div class="flex gap-3 mt-6">
+            <button (click)="saveEdit()"
+                    class="flex-1 px-4 py-2 bg-gradient-to-r from-cyanx to-accent hover:from-accent hover:to-cyanx rounded-lg font-medium transition-all">
+              Salvar
+            </button>
+            <button (click)="closeEditModal()"
+                    class="px-4 py-2 bg-edge hover:bg-card rounded-lg font-medium transition-all">
+              Cancelar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
-
-</div>

@@ -1,325 +1,340 @@
 <div class="max-w-7xl mx-auto p-4 space-y-6">
 
-  <!-- Header -->
-  <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
-    <div class="flex items-center gap-3">
+      <!-- Header -->
+      <header class="flex flex-wrap justify-between items-center gap-4 animate-slide-up">
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-bold">📊 Dashboard</h1>
+        </div>
+      </header>
 
-      <!-- <button (click)="loadDemo()" class="px-4 py-2 rounded bg-gradient-to-r from-edge to-card hover:from-card hover:to-edge border border-edge">🎮 Demo</button> -->
-    </div>
-  </header>
+      <!-- Filtros e Agrupamento -->
+      <section class="card p-4 animate-slide-up" style="animation-delay: .05s">
+        <h2 class="text-lg font-semibold mb-3">🔍 Filtros e Agrupamento</h2>
+        <div class="grid md:grid-cols-6 gap-3">
 
-  <!-- Filtros e Agrupamento -->
-  <section class="card p-4 animate-slide-up" style="animation-delay: .05s">
-    <h2 class="text-lg font-semibold mb-3">🔍 Filtros e Agrupamento</h2>
-    <div class="grid md:grid-cols-5 gap-3">
-      <div>
-        <label class="text-xs muted block mb-1">Instrumento</label>
-        <input [(ngModel)]="filters.instrument" type="text" placeholder="ex: TECH100" class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-      <div>
-        <label class="text-xs muted block mb-1">Data Início</label>
-        <input [(ngModel)]="filters.startDate" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-      <div>
-        <label class="text-xs muted block mb-1">Data Fim</label>
-        <input [(ngModel)]="filters.endDate" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
-      </div>
-      <div>
-        <label class="text-xs muted block mb-1">Agrupar por</label>
-        <select [(ngModel)]="filters.groupBy" class="w-full bg-blacker border border-edge rounded px-3 py-2">
-          <option value="instrument">Instrumento</option>
-          <option value="day">Dia</option>
-          <option value="week">Semana</option>
-          <option value="month">Mês</option>
-          <option value="hour">Hora</option>
-          <option value="side">Side</option>
-        </select>
-      </div>
-      <div class="flex gap-2 items-end">
-        <button (click)="applyFilters()" class="px-2 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">✅ Aplicar</button>
-        <button (click)="clearFilters()" class="px-4 py-2 rounded border border-edge hover:bg-card">❌ Limpar</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- KPIs Linha 1 -->
-  <section id="kpiGlobal" class="grid grid-cols-2 md:grid-cols-6 gap-6 animate-slide-up" style="animation-delay: .1s">
-    <div class="card kpi text-good">
-      <div class="text-2xl mb-2">💰</div>
-      <div class="text-xs muted">Resultado Total</div>
-      <div class="v text-good">{{ kpis.totalPL | number:'1.2-2' }}</div>
-    </div>
-
-    <div class="card kpi text-cyanx">
-      <div class="text-2xl mb-2">📊</div>
-      <div class="text-xs muted">Win Rate</div>
-      <div class="v text-cyanx">{{ kpis.winRate | number:'1.2-2' }}%</div>
-    </div>
-
-    <div class="card kpi text-accent">
-      <div class="text-2xl mb-2">📈</div>
-      <div class="text-xs muted">Expectancy</div>
-      <div class="v text-accent">{{ kpis.expectancy | number:'1.2-2' }}</div>
-    </div>
-
-    <div class="card kpi text-good">
-      <div class="text-2xl mb-2">🚀</div>
-      <div class="text-xs muted">Maior Ganho</div>
-      <div class="v text-good">{{ kpis.maxGain | number:'1.2-2' }}</div>
-    </div>
-
-    <div class="card kpi text-bad">
-      <div class="text-2xl mb-2">⚠️</div>
-      <div class="text-xs muted">Maior Perda</div>
-      <div class="v text-bad">{{ kpis.maxLoss | number:'1.2-2' }}</div>
-    </div>
-
-    <div class="card kpi text-accent">
-      <div class="text-2xl mb-2">📉</div>
-      <div class="text-xs muted">Drawdown</div>
-      <div class="v text-accent">{{ kpis.drawdown | number:'1.2-2' }}</div>
-    </div>
-  </section>
-
-  <!-- KPIs Linha 2 -->
-  <section class="grid md:grid-cols-4 gap-6 animate-slide-up" style="animation-delay: .12s">
-    <div class="card p-4 border-t-4 border-good">
-      <div class="text-xs text-gray-400">P/L 30 dias</div>
-      <div class="text-2xl font-bold text-good mt-1">{{ kpis30Days.pl | currency:'EUR' }}</div>
-      <div class="text-xs text-gray-500">Expectancy: {{ kpis30Days.expectancy | currency:'EUR' }}/trade</div>
-    </div>
-    <div class="card p-4 border-t-4 border-cyanx">
-      <div class="text-xs text-gray-400">Win Rate</div>
-      <div class="text-2xl font-bold text-cyanx mt-1">{{ kpis30Days.winRate | number:'1.0-0' }}%</div>
-      <div class="text-xs text-gray-500">Payoff médio {{ kpis30Days.payoff }}</div>
-    </div>
-    <div class="card p-4 border-t-4 border-accent">
-      <div class="text-xs text-gray-400">MAE / MFE (médio)</div>
-      <div class="text-2xl font-bold text-accent mt-1">{{ kpis30Days.maeMfe }}</div>
-      <div class="text-xs text-gray-500">Controle de calor</div>
-    </div>
-    <div class="card p-4 border-t-4 border-bad">
-      <div class="text-xs text-gray-400">Maior DD (mês)</div>
-      <div class="text-2xl font-bold text-bad mt-1">{{ kpis30Days.maxDD }}</div>
-      <div class="text-xs text-gray-500">Recuperação: {{ kpis30Days.ddRecover }}</div>
-    </div>
-  </section>
-
-  <!-- Insights -->
-  <section class="card p-4 animate-slide-up" style="animation-delay: .15s">
-    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Minhas considerações a você:</h2>
-    <div class="space-y-2 text-gray-200">
-      <div *ngFor="let insight of insights" class="p-2 rounded hover:bg-edge/50">• {{ insight }}</div>
-      <div *ngIf="insights.length === 0" class="text-gray-400 text-center py-4">📊 Carregando insights...</div>
-    </div>
-  </section>
-
-  <!-- Heatmap -->
-  <section class="card p-4 animate-slide-up" style="animation-delay: .18s">
-    <h2 class="text-lg font-semibold mb-3">⏱️ Heatmap — Hora x Dia (P/L)</h2>
-    <div id="heatmapHoraDia" style="height: 300px" class="rounded-lg"></div>
-  </section>
-
-
-  <!-- Pivot -->
-  <section class="card p-4 overflow-x-auto animate-slide-up">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xl font-semibold">📋 Pivot por Grupo</h2>
-      <span id="groupLabel" class="chip">Agrupado por: {{ filters.groupBy }}</span>
-    </div>
-    <table class="w-full text-sm tbl">
-      <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
-        <tr>
-          <th class="text-left">Grupo</th>
-          <th class="text-right">Trades</th>
-          <th class="text-right">P/L (€)</th>
-          <th class="text-right">Média (€)</th>
-          <th class="text-right">Win Rate</th>
-          <th class="text-right">%P/L+</th>
-          <th class="text-right">Melhor (€)</th>
-          <th class="text-right">Pior (€)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of pivotData" class="hover:bg-edge/20">
-          <td class="text-left font-semibold">{{ row.name }}</td>
-          <td class="text-right">{{ row.trades }}</td>
-          <td class="text-right" [ngClass]="getKPIClass(row.pl,'pl')">{{ row.pl | number:'1.2-2' }}</td>
-          <td class="text-right">{{ row.avg | number:'1.2-2' }}</td>
-          <td class="text-right">{{ row.winRate | number:'1.1-1' }}%</td>
-          <td class="text-right">{{ row.plPositiveShare | number:'1.1-1' }}%</td>
-          <td class="text-right text-good">{{ row.best | number:'1.2-2' }}</td>
-          <td class="text-right text-bad">{{ row.worst | number:'1.2-2' }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-<!-- Seção de Todos os Trades com botão de detalhes -->
-<section class="card p-4 overflow-x-auto animate-slide-up">
-  <h2 class="text-xl font-semibold mb-3">📋 Todos os Trades</h2>
-  <table class="w-full text-sm tbl">
-    <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
-      <tr>
-        <th class="text-center">Detalhes</th>
-        <th>Data/Hora</th>
-        <th>Instrumento</th>
-        <th>Side</th>
-        <th>P/L (€)</th>
-        <th>Setup</th>
-        <th class="text-center">Análise</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let trade of trades" class="hover:bg-edge/20 transition-all">
-        <!-- Botão de Detalhes -->
-        <td class="text-center">
-          <button
-            (click)="openTradeDetail(trade.objectId)"
-            class="p-2 rounded-lg bg-cyanx/10 hover:bg-cyanx/20 border border-cyanx/30 hover:border-cyanx/50 transition-all group"
-            title="Ver detalhes do trade">
-            <svg class="w-4 h-4 text-cyanx group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-          </button>
-        </td>
-
-        <!-- Data/Hora -->
-        <td class="font-mono text-xs">
-          {{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}
-        </td>
-
-        <!-- Instrumento -->
-        <td>
-          <span class="font-semibold text-cyanx">{{ trade.instrument }}</span>
-        </td>
-
-        <!-- Side -->
-        <td>
-          <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                [ngClass]="trade.side==='buy' ? 'bg-good/20 text-good' : 'bg-bad/20 text-bad'">
-            <span>{{ trade.side === 'buy' ? '📈' : '📉' }}</span>
-            <span>{{ trade.side | uppercase }}</span>
-          </span>
-        </td>
-
-        <!-- P/L -->
-        <td [ngClass]="getTradeProfitClass(trade.realizedPLEUR)" class="font-bold">
-          <span *ngIf="trade.realizedPLEUR >= 0">+</span>{{ trade.realizedPLEUR | number:'1.2-2' }}
-        </td>
-
-        <!-- Setup -->
-        <td>
-          <span class="chip bg-gradient-to-r from-accent/10 to-accent/20 text-accent text-xs">
-            {{ trade.setup }}
-          </span>
-        </td>
-
-        <!-- Indicadores de análise -->
-        <td class="text-center">
-          <div class="flex items-center justify-center gap-1">
-            <!-- Indicador de Meta Diária -->
-            <span *ngIf="trade.dailyGoalReached"
-                  class="text-good text-lg"
-                  title="Meta diária atingida">
-              🎯
-            </span>
-
-            <!-- Indicador de Loss Diário -->
-            <span *ngIf="trade.dailyLossReached"
-                  class="text-bad text-lg"
-                  title="Loss diário atingido">
-              ⚠️
-            </span>
-
-            <!-- Indicador de Ganância -->
-            <span *ngIf="trade.greed"
-                  class="text-accent text-lg"
-                  title="Ganância detectada">
-              💰
-            </span>
-
-            <!-- Indicador de Comentários -->
-            <span *ngIf="trade.comments && trade.comments.length > 0"
-                  class="text-cyanx text-sm"
-                  title="{{ trade.comments.length }} comentários">
-              💬 {{ trade.comments.length }}
-            </span>
-
-            <!-- Indicador de Vídeo -->
-            <span *ngIf="trade.youtubeLink"
-                  class="text-red-500 text-lg"
-                  title="Análise em vídeo disponível">
-              🎥
-            </span>
+          <!-- Filtro de Conta -->
+          <div>
+            <label class="text-xs muted block mb-1">Conta</label>
+            <select [(ngModel)]="filters.accountId" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+              <option value="">Todas as Contas</option>
+              <option *ngFor="let account of accounts" [value]="account.objectId">
+                {{ account.name }} {{ account.broker ? '(' + account.broker + ')' : '' }}
+              </option>
+            </select>
           </div>
-        </td>
-      </tr>
 
-      <!-- Mensagem quando não há trades -->
-      <tr *ngIf="trades.length === 0">
-        <td colspan="7" class="text-center py-8 text-gray-400">
-          <div class="flex flex-col items-center gap-2">
-            <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <p>Nenhum trade encontrado</p>
-            <p class="text-xs">Ajuste os filtros ou importe seus trades</p>
+          <!-- Filtro de Instrumento com Multi-select -->
+          <div>
+            <label class="text-xs muted block mb-1">Instrumento(s)</label>
+            <div class="relative">
+              <div (click)="toggleInstrumentDropdown()"
+                   class="w-full bg-blacker border border-edge rounded px-3 py-2 cursor-pointer flex items-center justify-between">
+                <span class="text-sm truncate">
+                  {{ getSelectedInstrumentsText() }}
+                </span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+
+              <!-- Dropdown de Instrumentos -->
+              <div *ngIf="showInstrumentDropdown"
+                   class="absolute top-full left-0 right-0 mt-1 bg-card border border-edge rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
+                <!-- Opção Todos -->
+                <label class="flex items-center px-3 py-2 hover:bg-edge/20 cursor-pointer">
+                  <input type="checkbox"
+                         [checked]="selectedInstruments.size === 0"
+                         (change)="toggleAllInstruments()"
+                         class="mr-2 rounded border-edge">
+                  <span class="text-sm">Todos</span>
+                </label>
+
+                <!-- Lista de Instrumentos -->
+                <div class="border-t border-edge">
+                  <label *ngFor="let instrument of availableInstruments"
+                         class="flex items-center px-3 py-2 hover:bg-edge/20 cursor-pointer">
+                    <input type="checkbox"
+                           [checked]="selectedInstruments.has(instrument)"
+                           (change)="toggleInstrument(instrument)"
+                           class="mr-2 rounded border-edge">
+                    <span class="text-sm">{{ instrument }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
 
-  <!-- Paginação -->
-  <div class="flex items-center justify-between mt-4 pt-4 border-t border-edge">
-    <div class="text-sm text-gray-400">
-      Mostrando {{ trades.length }} de {{ kpis.totalTrades }} trades
+          <div>
+            <label class="text-xs muted block mb-1">Data Início</label>
+            <input [(ngModel)]="filters.startDate" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          </div>
+
+          <div>
+            <label class="text-xs muted block mb-1">Data Fim</label>
+            <input [(ngModel)]="filters.endDate" type="date" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+          </div>
+
+          <div>
+            <label class="text-xs muted block mb-1">Agrupar por</label>
+            <select [(ngModel)]="filters.groupBy" class="w-full bg-blacker border border-edge rounded px-3 py-2">
+              <option value="instrument">Instrumento</option>
+              <option value="account">Conta</option>
+              <option value="day">Dia</option>
+              <option value="week">Semana</option>
+              <option value="month">Mês</option>
+              <option value="hour">Hora</option>
+              <option value="side">Side</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2 items-end">
+            <button (click)="applyFilters()" class="px-2 py-2 rounded bg-cyanx/20 hover:bg-cyanx/30 border border-cyanx/50 flex-1">✅ Aplicar</button>
+            <button (click)="clearFilters()" class="px-4 py-2 rounded border border-edge hover:bg-card">❌ Limpar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPIs Linha 1 -->
+      <section id="kpiGlobal" class="grid grid-cols-2 md:grid-cols-6 gap-6 animate-slide-up" style="animation-delay: .1s">
+        <div class="card kpi text-good">
+          <div class="text-2xl mb-2">💰</div>
+          <div class="text-xs muted">Resultado Total</div>
+          <div class="v text-good">{{ kpis.totalPL | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="card kpi text-cyanx">
+          <div class="text-2xl mb-2">📊</div>
+          <div class="text-xs muted">Win Rate</div>
+          <div class="v text-cyanx">{{ kpis.winRate | number:'1.2-2' }}%</div>
+        </div>
+
+        <div class="card kpi text-accent">
+          <div class="text-2xl mb-2">📈</div>
+          <div class="text-xs muted">Expectancy</div>
+          <div class="v text-accent">{{ kpis.expectancy | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="card kpi text-good">
+          <div class="text-2xl mb-2">🚀</div>
+          <div class="text-xs muted">Maior Ganho</div>
+          <div class="v text-good">{{ kpis.maxGain | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="card kpi text-bad">
+          <div class="text-2xl mb-2">⚠️</div>
+          <div class="text-xs muted">Maior Perda</div>
+          <div class="v text-bad">{{ kpis.maxLoss | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="card kpi text-accent">
+          <div class="text-2xl mb-2">📉</div>
+          <div class="text-xs muted">Drawdown</div>
+          <div class="v text-accent">{{ kpis.drawdown | number:'1.2-2' }}</div>
+        </div>
+      </section>
+
+      <!-- KPIs Linha 2 -->
+      <section class="grid md:grid-cols-4 gap-6 animate-slide-up" style="animation-delay: .12s">
+        <div class="card p-4 border-t-4 border-good">
+          <div class="text-xs text-gray-400">P/L 30 dias</div>
+          <div class="text-2xl font-bold text-good mt-1">{{ kpis30Days.pl | currency:'EUR' }}</div>
+          <div class="text-xs text-gray-500">Expectancy: {{ kpis30Days.expectancy | currency:'EUR' }}/trade</div>
+        </div>
+        <div class="card p-4 border-t-4 border-cyanx">
+          <div class="text-xs text-gray-400">Win Rate</div>
+          <div class="text-2xl font-bold text-cyanx mt-1">{{ kpis30Days.winRate | number:'1.0-0' }}%</div>
+          <div class="text-xs text-gray-500">Payoff médio {{ kpis30Days.payoff }}</div>
+        </div>
+        <div class="card p-4 border-t-4 border-accent">
+          <div class="text-xs text-gray-400">MAE / MFE (médio)</div>
+          <div class="text-2xl font-bold text-accent mt-1">{{ kpis30Days.maeMfe }}</div>
+          <div class="text-xs text-gray-500">Controle de calor</div>
+        </div>
+        <div class="card p-4 border-t-4 border-bad">
+          <div class="text-xs text-gray-400">Maior DD (mês)</div>
+          <div class="text-2xl font-bold text-bad mt-1">{{ kpis30Days.maxDD }}</div>
+          <div class="text-xs text-gray-500">Recuperação: {{ kpis30Days.ddRecover }}</div>
+        </div>
+      </section>
+
+      <!-- Insights -->
+      <section class="card p-4 animate-slide-up" style="animation-delay: .15s">
+        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">🧠 Minhas considerações a você:</h2>
+        <div class="space-y-2 text-gray-200">
+          <div *ngFor="let insight of insights" class="p-2 rounded hover:bg-edge/50">• {{ insight }}</div>
+          <div *ngIf="insights.length === 0" class="text-gray-400 text-center py-4">📊 Carregando insights...</div>
+        </div>
+      </section>
+
+      <!-- Heatmap -->
+      <section class="card p-4 animate-slide-up" style="animation-delay: .18s">
+        <h2 class="text-lg font-semibold mb-3">⏱️ Heatmap — Hora x Dia (P/L)</h2>
+        <div id="heatmapHoraDia" style="height: 300px" class="rounded-lg"></div>
+      </section>
+
+      <!-- Pivot -->
+      <section class="card p-4 overflow-x-auto animate-slide-up">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold">📋 Pivot por Grupo</h2>
+          <span id="groupLabel" class="chip">Agrupado por: {{ filters.groupBy }}</span>
+        </div>
+        <table class="w-full text-sm tbl">
+          <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+            <tr>
+              <th class="text-left">Grupo</th>
+              <th class="text-right">Trades</th>
+              <th class="text-right">P/L (€)</th>
+              <th class="text-right">Média (€)</th>
+              <th class="text-right">Win Rate</th>
+              <th class="text-right">%P/L+</th>
+              <th class="text-right">Melhor (€)</th>
+              <th class="text-right">Pior (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pivotData" class="hover:bg-edge/20">
+              <td class="text-left font-semibold">{{ row.name }}</td>
+              <td class="text-right">{{ row.trades }}</td>
+              <td class="text-right" [ngClass]="getKPIClass(row.pl,'pl')">{{ row.pl | number:'1.2-2' }}</td>
+              <td class="text-right">{{ row.avg | number:'1.2-2' }}</td>
+              <td class="text-right">{{ row.winRate | number:'1.1-1' }}%</td>
+              <td class="text-right">{{ row.plPositiveShare | number:'1.1-1' }}%</td>
+              <td class="text-right text-good">{{ row.best | number:'1.2-2' }}</td>
+              <td class="text-right text-bad">{{ row.worst | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Seção de Todos os Trades -->
+      <section class="card p-4 overflow-x-auto animate-slide-up">
+        <h2 class="text-xl font-semibold mb-3">📋 Todos os Trades</h2>
+        <table class="w-full text-sm tbl">
+          <thead class="bg-gradient-to-r from-edge to-card text-gray-300">
+            <tr>
+              <th class="text-center">Detalhes</th>
+              <th>Data/Hora</th>
+              <th>Conta</th>
+              <th>Instrumento</th>
+              <th>Side</th>
+              <th>P/L (€)</th>
+              <th>Setup</th>
+              <th class="text-center">Análise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let trade of trades" class="hover:bg-edge/20 transition-all">
+              <!-- Botão de Detalhes -->
+              <td class="text-center">
+                <button
+                  (click)="openTradeDetail(trade.objectId)"
+                  class="p-2 rounded-lg bg-cyanx/10 hover:bg-cyanx/20 border border-cyanx/30 hover:border-cyanx/50 transition-all group"
+                  title="Ver detalhes do trade">
+                  <svg class="w-4 h-4 text-cyanx group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                </button>
+              </td>
+
+              <!-- Data/Hora -->
+              <td class="font-mono text-xs">
+                {{ trade.executedAtUTC | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+
+              <!-- Conta -->
+              <td>
+                <span class="text-xs px-2 py-1 rounded-full bg-edge/30">
+                  {{ getAccountName(trade.accountId) || '—' }}
+                </span>
+              </td>
+
+              <!-- Instrumento -->
+              <td>
+                <span class="font-semibold text-cyanx">{{ trade.instrument }}</span>
+              </td>
+
+              <!-- Side -->
+              <td>
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                      [ngClass]="trade.side==='buy' ? 'bg-good/20 text-good' : 'bg-bad/20 text-bad'">
+                  <span>{{ trade.side === 'buy' ? '📈' : '📉' }}</span>
+                  <span>{{ trade.side | uppercase }}</span>
+                </span>
+              </td>
+
+              <!-- P/L -->
+              <td [ngClass]="getTradeProfitClass(trade.realizedPLEUR)" class="font-bold">
+                <span *ngIf="trade.realizedPLEUR >= 0">+</span>{{ trade.realizedPLEUR | number:'1.2-2' }}
+              </td>
+
+              <!-- Setup -->
+              <td>
+                <span class="chip bg-gradient-to-r from-accent/10 to-accent/20 text-accent text-xs">
+                  {{ trade.setup || '—' }}
+                </span>
+              </td>
+
+              <!-- Indicadores de análise -->
+              <td class="text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <span *ngIf="trade.dailyGoalReached"
+                        class="text-good text-lg"
+                        title="Meta diária atingida">
+                    🎯
+                  </span>
+                  <span *ngIf="trade.dailyLossReached"
+                        class="text-bad text-lg"
+                        title="Loss diário atingido">
+                    ⚠️
+                  </span>
+                  <span *ngIf="trade.greed"
+                        class="text-accent text-lg"
+                        title="Ganância detectada">
+                    💰
+                  </span>
+                  <span *ngIf="trade.comments && trade.comments.length > 0"
+                        class="text-cyanx text-sm"
+                        title="{{ trade.comments.length }} comentários">
+                    💬 {{ trade.comments.length }}
+                  </span>
+                  <span *ngIf="trade.youtubeLink"
+                        class="text-red-500 text-lg"
+                        title="Análise em vídeo disponível">
+                    🎥
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Mensagem quando não há trades -->
+            <tr *ngIf="trades.length === 0">
+              <td colspan="8" class="text-center py-8 text-gray-400">
+                <div class="flex flex-col items-center gap-2">
+                  <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  <p>Nenhum trade encontrado</p>
+                  <p class="text-xs">Ajuste os filtros ou importe seus trades</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Paginação -->
+        <div class="flex items-center justify-between mt-4 pt-4 border-t border-edge">
+          <div class="text-sm text-gray-400">
+            Mostrando {{ trades.length }} de {{ kpis.totalTrades }} trades
+          </div>
+          <div class="flex gap-2">
+            <button
+              (click)="loadMoreTrades()"
+              [disabled]="loading || trades.length >= kpis.totalTrades"
+              class="px-4 py-2 rounded bg-edge hover:bg-card border border-edge transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              Carregar mais
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
-    <div class="flex gap-2">
-      <button
-        (click)="loadTrades()"
-        [disabled]="loading || trades.length >= kpis.totalTrades"
-        class="px-4 py-2 rounded bg-edge hover:bg-card border border-edge transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-        Carregar mais
-      </button>
-    </div>
-  </div>
-</section>
-
-<style>
-/* Estilos adicionais para a tabela */
-.tbl tbody tr {
-  transition: all 0.2s ease;
-}
-
-.tbl tbody tr:hover {
-  transform: translateX(2px);
-  box-shadow: 0 2px 4px rgba(34, 211, 238, 0.1);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* Animação para os ícones de análise */
-.tbl tbody tr td:last-child span {
-  transition: transform 0.2s ease;
-}
-
-.tbl tbody tr:hover td:last-child span {
-  transform: scale(1.1);
-}
-
-/* Estilo do botão de detalhes */
-button:hover svg {
-  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.5));
-}
-</style>
-</div>

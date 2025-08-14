@@ -2,8 +2,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TradeService, Trade } from '../services/trade.service';
+import { TradeService, Trade, ImportTradesPayload } from '../services/trade.service';
 import { Subject, takeUntil } from 'rxjs';
+import { Account, AccountService } from '../services/account.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-trade-maintenance',
@@ -15,48 +17,50 @@ import { Subject, takeUntil } from 'rxjs';
 export class TradeMaintenance implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  // Estados
   loading = false;
-  error: string | null = null;
-  successMessage: string | null = null;
+  importing = false;
+  trades: any[] = [];
+  accounts: Account[] = [];
+  selectedTrades: any[] = [];
+  allSelected = false;
 
-  // Dados
-  trades: Trade[] = [];
-  selectedTrades: Set<string> = new Set();
+  showImportModal = false;
+  showEditModal = false;
+  editingTrade: any = {};
+  importError = '';
 
-  // Paginação
-  currentPage = 1;
-  pageSize = 25;
-  totalTrades = 0;
-
-  // Formulário de novo trade
-  newTrade: Partial<Trade> = {
-    executedAtUTC: new Date().toISOString().slice(0, 16),
+  filters = {
+    accountId: '',
     instrument: '',
-    side: 'buy',
-    realizedPLEUR: 0,
-    durationMin: 0,
-    setup: 'SMC',
-    tradeStatus: 'Vencedor',
-    openPrice: null,
-    execPrice: null,
-    stopPrice: null,
-    targetPrice: null,
-    spread: null,
-    otherFees: null,
-    entryType: 50,
-    dailyGoalReached: false,
-    dailyLossReached: false,
-    greed: false
+    startDate: '',
+    endDate: ''
   };
 
-  // Importação
-  selectedFile: File | null = null;
-  importing = false;
+  stats = {
+    total: 0,
+    wins: 0,
+    losses: 0,
+    accounts: 0,
+    totalPL: 0
+  };
 
-  constructor(private tradeService: TradeService) {}
+  importData = {
+    accountId: '',
+    name: '',
+    fileName: '',
+    trades: [] as Trade[],
+    preview: [] as Trade[],
+    tradesCount: 0
+  };
+
+  constructor(
+    private tradeService: TradeService,
+    private accountService: AccountService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
+    this.loadAccounts();
     this.loadTrades();
   }
 
@@ -65,361 +69,282 @@ export class TradeMaintenance implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  loadAccounts() {
+    this.accountService.list()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.accounts = response.results || [];
+          this.stats.accounts = this.accounts.length;
+        }
+      });
+  }
+
   loadTrades() {
     this.loading = true;
-    this.error = null;
-
-    const filter = {
+    const filter: any = {
       OrderBy: '-executedAtUTC',
-      Limit: this.pageSize,
-      Skip: (this.currentPage - 1) * this.pageSize
+      Limit: 100
     };
+
+    if (this.filters.accountId) {
+      filter.AccountId = this.filters.accountId;
+    }
+
+    if (this.filters.instrument) {
+      filter.Instrument = this.filters.instrument;
+    }
+
+    if (this.filters.startDate) {
+      filter.StartDate = new Date(this.filters.startDate);
+    }
+
+    if (this.filters.endDate) {
+      filter.EndDate = new Date(this.filters.endDate);
+    }
 
     this.tradeService.list(filter)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.trades = response.results || [];
+          this.updateStats();
           this.loading = false;
         },
-        error: (error) => {
-          this.error = 'Erro ao carregar trades';
+        error: () => {
           this.loading = false;
         }
       });
-
-    // Carregar total de trades para paginação
-    this.tradeService.getKPIs()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (kpis) => {
-          this.totalTrades = kpis.totalTrades;
-        }
-      });
   }
 
-  // Formulário manual
-  clearForm() {
-    this.newTrade = {
-      executedAtUTC: new Date().toISOString().slice(0, 16),
+  loadMoreTrades() {
+    // Implementar paginação
+  }
+
+  updateStats() {
+    this.stats.total = this.trades.length;
+    this.stats.wins = this.trades.filter(t => t.realizedPLEUR > 0).length;
+    this.stats.losses = this.trades.filter(t => t.realizedPLEUR < 0).length;
+    this.stats.totalPL = this.trades.reduce((sum, t) => sum + (t.realizedPLEUR || 0), 0);
+  }
+
+  applyFilters() {
+    this.loadTrades();
+  }
+
+  clearFilters() {
+    this.filters = {
+      accountId: '',
       instrument: '',
-      side: 'buy',
-      realizedPLEUR: 0,
-      durationMin: 0,
-      setup: 'SMC',
-      tradeStatus: 'Vencedor',
-      openPrice: null,
-      execPrice: null,
-      stopPrice: null,
-      targetPrice: null,
-      spread: null,
-      otherFees: null,
-      entryType: 50,
-      dailyGoalReached: false,
-      dailyLossReached: false,
-      greed: false
+      startDate: '',
+      endDate: ''
     };
+    this.loadTrades();
   }
 
-  saveTrade() {
-    if (!this.newTrade.instrument) {
-      this.error = 'Instrumento é obrigatório';
+  openImportModal() {
+    this.showImportModal = true;
+    this.resetImportData();
+  }
+
+  closeImportModal() {
+    this.showImportModal = false;
+    this.resetImportData();
+  }
+
+  resetImportData() {
+    this.importData = {
+      accountId: '',
+      name: '',
+      fileName: '',
+      trades: [],
+      preview: [],
+      tradesCount: 0
+    };
+    this.importError = '';
+  }
+
+  handleFileInput(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.importData.fileName = file.name;
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const text = e.target.result;
+
+      if (file.name.endsWith('.json')) {
+        this.parseJsonFile(text);
+      } else if (file.name.endsWith('.csv')) {
+        this.parseCsvFile(text);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  parseJsonFile(text: string) {
+    try {
+      const json = JSON.parse(text);
+      let trades: Trade[] = [];
+
+      if (json && Array.isArray(json.trades)) {
+        trades = json.trades;
+      } else if (Array.isArray(json)) {
+        trades = json;
+      }
+
+      this.importData.trades = trades;
+      this.importData.tradesCount = trades.length;
+      this.importData.preview = trades.slice(0, 5);
+    } catch (error) {
+      this.importError = 'Erro ao processar arquivo JSON';
+    }
+  }
+
+  parseCsvFile(text: string) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) {
+      this.importError = 'Arquivo CSV vazio ou inválido';
       return;
     }
 
-    const trade: Trade = {
-      ...this.newTrade as Trade,
-      executedAtUTC: this.newTrade.executedAtUTC ?
-        new Date(this.newTrade.executedAtUTC).toISOString() :
-        new Date().toISOString()
-    };
+    const headers = lines[0].split(',').map(h => h.trim());
+    const trades: Trade[] = [];
 
-    this.loading = true;
-    this.tradeService.create(trade)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.successMessage = 'Trade salvo com sucesso!';
-          this.clearForm();
-          this.loadTrades();
-          setTimeout(() => this.successMessage = null, 3000);
-        },
-        error: (error) => {
-          this.error = 'Erro ao salvar trade';
-          this.loading = false;
-        }
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const trade: any = {};
+
+      headers.forEach((header, index) => {
+        trade[header] = values[index];
       });
+
+      // Converter campos numéricos
+      if (trade.realizedPLEUR) {
+        trade.realizedPLEUR = parseFloat(trade.realizedPLEUR);
+      }
+      if (trade.durationMin) {
+        trade.durationMin = parseInt(trade.durationMin);
+      }
+
+      trades.push(trade);
+    }
+
+    this.importData.trades = trades;
+    this.importData.tradesCount = trades.length;
+    this.importData.preview = trades.slice(0, 5);
   }
 
-  // Importação
-  onFileSelected(event: any) {
-    this.selectedFile = event.target.files[0];
-  }
+  confirmImport() {
+    if (!this.importData.accountId) {
+      this.importError = 'Por favor, selecione uma conta';
+      return;
+    }
 
-  importFile() {
-    if (!this.selectedFile) {
-      this.error = 'Selecione um arquivo para importar';
+    if (this.importData.trades.length === 0) {
+      this.importError = 'Nenhum trade para importar';
       return;
     }
 
     this.importing = true;
-    const reader = new FileReader();
+    this.importError = '';
 
-    reader.onload = (e: any) => {
-      try {
-        const content = e.target.result;
-        let trades: Trade[] = [];
-
-        if (this.selectedFile!.name.toLowerCase().endsWith('.json')) {
-          const data = JSON.parse(content);
-          trades = Array.isArray(data) ? data : data.trades || [];
-        } else if (this.selectedFile!.name.toLowerCase().endsWith('.csv')) {
-          trades = this.parseCSV(content);
-        } else {
-          throw new Error('Formato não suportado');
-        }
-
-        // Validar e normalizar trades
-        trades = trades.map(t => this.normalizeTrade(t));
-
-        // Enviar para API
-        this.tradeService.importTrades({
-          name: this.selectedFile!.name,
-          statementDateISO: new Date().toISOString(),
-          trades: trades
-        }).pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = `${trades.length} trades importados com sucesso!`;
-            this.selectedFile = null;
-            this.loadTrades();
-            setTimeout(() => this.successMessage = null, 5000);
-          },
-          error: (error) => {
-            this.error = 'Erro ao importar trades';
-          },
-          complete: () => {
-            this.importing = false;
-          }
-        });
-
-      } catch (error) {
-        this.error = 'Erro ao processar arquivo';
-        this.importing = false;
-      }
+    const payload: ImportTradesPayload = {
+      name: this.importData.name || this.importData.fileName,
+      accountId: this.importData.accountId,
+      trades: this.importData.trades
     };
 
-    reader.readAsText(this.selectedFile);
-  }
-
-  private parseCSV(content: string): any[] {
-    const lines = content.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
-      const obj: any = {};
-      headers.forEach((h, i) => {
-        obj[h] = values[i];
-      });
-      return obj;
-    });
-  }
-
-  private normalizeTrade(trade: any): Trade {
-    return {
-      executedAtUTC: trade.executedAtUTC || new Date().toISOString(),
-      instrument: trade.instrument || 'UNKNOWN',
-      side: (trade.side || 'buy').toLowerCase(),
-      realizedPLEUR: parseFloat(trade.realizedPLEUR) || 0,
-      durationMin: parseInt(trade.durationMin) || null,
-      setup: trade.setup || 'SMC',
-      tradeStatus: trade.tradeStatus || (trade.realizedPLEUR >= 0 ? 'Vencedor' : 'Perdedor'),
-      openPrice: parseFloat(trade.openPrice) || null,
-      execPrice: parseFloat(trade.execPrice) || null,
-      stopPrice: parseFloat(trade.stopPrice) || null,
-      targetPrice: parseFloat(trade.targetPrice) || null,
-      spread: parseFloat(trade.spread) || null,
-      otherFees: parseFloat(trade.otherFees) || null,
-      entryType: parseFloat(trade.entryType) || 50,
-      dailyGoalReached: trade.dailyGoalReached === true,
-      dailyLossReached: trade.dailyLossReached === true,
-      greed: trade.greed === true,
-      youtubeLink: trade.youtubeLink || '',
-      notes: trade.notes || '',
-      tags: trade.tags || [],
-      comments: []
-    } as Trade;
-  }
-
-  // Seleção e exclusão
-  toggleSelectAll(event: any) {
-    if (event.target.checked) {
-      this.trades.forEach(t => {
-        if (t.objectId) this.selectedTrades.add(t.objectId);
-      });
-    } else {
-      this.selectedTrades.clear();
-    }
-  }
-
-  toggleSelect(tradeId: string | undefined) {
-    if (!tradeId) return;
-
-    if (this.selectedTrades.has(tradeId)) {
-      this.selectedTrades.delete(tradeId);
-    } else {
-      this.selectedTrades.add(tradeId);
-    }
-  }
-
-  isSelected(tradeId: string | undefined): boolean {
-    return tradeId ? this.selectedTrades.has(tradeId) : false;
-  }
-
-  deleteSelected() {
-    if (this.selectedTrades.size === 0) return;
-
-    if (!confirm(`Excluir ${this.selectedTrades.size} trade(s) selecionado(s)?`)) {
-      return;
-    }
-
-    this.loading = true;
-    const deletePromises = Array.from(this.selectedTrades).map(id =>
-      this.tradeService.delete(id).toPromise()
-    );
-
-    Promise.all(deletePromises)
-      .then(() => {
-        this.successMessage = `${this.selectedTrades.size} trades excluídos com sucesso!`;
-        this.selectedTrades.clear();
-        this.loadTrades();
-        setTimeout(() => this.successMessage = null, 3000);
-      })
-      .catch(() => {
-        this.error = 'Erro ao excluir trades';
-        this.loading = false;
-      });
-  }
-
-  deleteTrade(tradeId: string | undefined) {
-    if (!tradeId) return;
-
-    if (!confirm('Excluir este trade?')) return;
-
-    this.loading = true;
-    this.tradeService.delete(tradeId)
+    this.tradeService.importTrades(payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Trade excluído com sucesso!';
+          this.importing = false;
+          this.closeImportModal();
           this.loadTrades();
-          setTimeout(() => this.successMessage = null, 3000);
         },
-        error: () => {
-          this.error = 'Erro ao excluir trade';
-          this.loading = false;
+        error: (error) => {
+          this.importing = false;
+          this.importError = 'Erro ao importar trades. Verifique o formato do arquivo.';
         }
       });
   }
 
-  deleteAll() {
-    if (!confirm('ATENÇÃO: Isso excluirá TODOS os trades. Deseja continuar?')) return;
-    if (!confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) return;
-
-    // Implementação simplificada - idealmente deveria haver um endpoint específico
-    this.loading = true;
-    const deletePromises = this.trades
-      .filter(t => t.objectId)
-      .map(t => this.tradeService.delete(t.objectId!).toPromise());
-
-    Promise.all(deletePromises)
-      .then(() => {
-        this.successMessage = 'Todos os trades foram excluídos!';
-        this.trades = [];
-        this.selectedTrades.clear();
-        this.totalTrades = 0;
-        setTimeout(() => this.successMessage = null, 3000);
-      })
-      .catch(() => {
-        this.error = 'Erro ao excluir trades';
-      })
-      .finally(() => {
-        this.loading = false;
-      });
+  toggleSelectAll(event: any) {
+    this.allSelected = event.target.checked;
+    this.trades.forEach(t => t.selected = this.allSelected);
+    this.updateSelection();
   }
 
-  // Paginação
-  get totalPages(): number {
-    return Math.ceil(this.totalTrades / this.pageSize);
+  updateSelection() {
+    this.selectedTrades = this.trades.filter(t => t.selected);
   }
 
-  get canGoPrevious(): boolean {
-    return this.currentPage > 1;
-  }
-
-  get canGoNext(): boolean {
-    return this.currentPage < this.totalPages;
-  }
-
-  previousPage() {
-    if (this.canGoPrevious) {
-      this.currentPage--;
-      this.loadTrades();
+  deleteSelected() {
+    if (confirm(`Excluir ${this.selectedTrades.length} trades selecionados?`)) {
+      // Implementar exclusão em lote
     }
   }
 
-  nextPage() {
-    if (this.canGoNext) {
-      this.currentPage++;
-      this.loadTrades();
+  editTrade(trade: any) {
+    this.editingTrade = { ...trade };
+    this.showEditModal = true;
+  }
+
+  closeEditModal() {
+    this.showEditModal = false;
+    this.editingTrade = {};
+  }
+
+  saveEdit() {
+    if (this.editingTrade.objectId) {
+      this.tradeService.update(this.editingTrade.objectId, this.editingTrade)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.closeEditModal();
+            this.loadTrades();
+          }
+        });
     }
   }
 
-  changePageSize(event: any) {
-    this.pageSize = parseInt(event.target.value);
-    this.currentPage = 1;
-    this.loadTrades();
+  viewDetails(trade: any) {
+    this.router.navigate(['/trade', trade.objectId]);
   }
 
-  // Formatação
-  formatDate(date: string): string {
-    return new Date(date).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  deleteTrade(trade: any) {
+    if (confirm(`Excluir trade de ${trade.instrument}?`)) {
+      this.tradeService.delete(trade.objectId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => this.loadTrades()
+        });
+    }
   }
 
-  formatCurrency(value: number | null | undefined): string {
-    if (value === null || value === undefined) return '—';
+  exportTrades() {
+    const data = JSON.stringify(this.trades, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trades_export_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  getAccountName(accountId: string | undefined): string {
+    if (!accountId) return '';
+    const account = this.accounts.find(a => a.objectId === accountId);
+    return account ? account.name : '';
+  }
+
+  formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
       currency: 'EUR'
     }).format(value);
-  }
-
-  getSideIcon(side: string): string {
-    return side === 'buy' ? '📈' : '📉';
-  }
-
-  getSideClass(side: string): string {
-    return side === 'buy' ? 'text-good' : 'text-bad';
-  }
-
-  getPLClass(pl: number): string {
-    return pl >= 0 ? 'text-good' : 'text-bad';
-  }
-
-  getStatusClass(status: string): string {
-    switch(status) {
-      case 'Vencedor': return 'bg-good/20 text-good';
-      case 'Perdedor': return 'bg-bad/20 text-bad';
-      case 'Proteção': return 'bg-accent/20 text-accent';
-      default: return 'bg-edge';
-    }
   }
 }
