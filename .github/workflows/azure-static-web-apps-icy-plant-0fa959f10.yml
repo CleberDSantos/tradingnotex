@@ -32,8 +32,8 @@ jobs:
           output_location: "dist/tradingnotex"
         env:
           # ✅ Forçar versão do Node.js no Oryx:
-          ORYX_NODE_VERSION: "22.9.0"
-          NODE_VERSION: "22.9.0"
+          ORYX_NODE_VERSION: "20.19.1"
+          NODE_VERSION: "20.19.1"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
