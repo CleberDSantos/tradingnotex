@@ -1,15 +1,9 @@
+// navigation.ts - Versão Responsiva
 import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStateService } from '../services/auth-state.service';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { AuthService } from '../services/auth.service';
-
-interface Alert {
-  type: 'good' | 'bad' | 'accent';
-  icon: string;
-  title: string;
-  msg: string;
-}
 
 @Component({
   selector: 'app-navigation',
@@ -20,6 +14,8 @@ interface Alert {
 export class Navigation {
   showToolsDropdown = false;
   showSettingsDropdown = false;
+  showMobileMenu = false;
+  showUserMenu = false;
   username: string | null = null;
 
   // Tools routes for active state
@@ -34,6 +30,30 @@ export class Navigation {
     this.username = localStorage.getItem('username');
   }
 
+  // Toggle mobile menu
+  toggleMobileMenu() {
+    this.showMobileMenu = !this.showMobileMenu;
+    // Fecha o menu de usuário se estiver aberto
+    if (this.showMobileMenu) {
+      this.showUserMenu = false;
+    }
+  }
+
+  // Toggle user menu mobile
+  toggleUserMenu() {
+    this.showUserMenu = !this.showUserMenu;
+    // Fecha o menu principal se estiver aberto
+    if (this.showUserMenu) {
+      this.showMobileMenu = false;
+    }
+  }
+
+  // Close mobile menu
+  closeMobileMenu() {
+    this.showMobileMenu = false;
+    this.showUserMenu = false;
+  }
+
   // Check if any tools route is active
   isToolsRouteActive(): boolean {
     return this.toolsRoutes.some(route => this.router.url.startsWith(route));
@@ -45,6 +65,7 @@ export class Navigation {
   }
 
   logout() {
+    this.closeMobileMenu();
     this.authService.logout().subscribe({
       next: () => {
         this.router.navigate(['/login']);
