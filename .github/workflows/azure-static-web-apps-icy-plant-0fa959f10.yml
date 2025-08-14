@@ -20,14 +20,6 @@ jobs:
           submodules: true
           lfs: false
       
-      # ✅ ADICIONAR ESTE STEP:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'  # ou '20.x'
-          cache: 'npm'
-          cache-dependency-path: './tradingnotex.webapp/package-lock.json'
-      
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -38,6 +30,10 @@ jobs:
           app_location: "./tradingnotex.webapp"
           api_location: ""
           output_location: "dist/tradingnotex"
+        env:
+          # ✅ Forçar versão do Node.js no Oryx:
+          ORYX_NODE_VERSION: "22.12.0"
+          NODE_VERSION: "22.12.0"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
