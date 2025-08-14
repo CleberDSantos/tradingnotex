@@ -4,15 +4,15 @@ import { environment } from '../../environments/environment';
 import { Observable, tap } from 'rxjs';
 import { AuthStateService } from './auth-state.service';
 
-export interface LoginRequest { 
-  username?: string; 
-  password?: string; 
+export interface LoginRequest {
+  username?: string;
+  password?: string;
 }
 
-export interface RegisterRequest { 
-  username?: string; 
-  password?: string; 
-  email?: string; 
+export interface RegisterRequest {
+  username?: string;
+  password?: string;
+  email?: string;
 }
 
 export interface LoginResponse {
