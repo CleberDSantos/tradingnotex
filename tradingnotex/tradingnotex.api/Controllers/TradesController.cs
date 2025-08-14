@@ -42,18 +42,29 @@ namespace TradingNoteX.Controllers
             return await _authService.ValidateSessionAsync(sessionToken);
         }
 
+
         [HttpGet]
-        public async Task<IActionResult> GetTrades([FromQuery] TradeFilterRequest filter)
+        public async Task<IActionResult> GetTrades([FromQuery] TradeFilterRequest? filter = null)
         {
             try
             {
                 var userId = await GetUserIdAsync();
+
+                // Se filter for null, criar um filtro padrão
+                filter ??= new TradeFilterRequest();
+
                 var trades = await _tradeService.GetTradesAsync(userId, filter);
                 return Ok(new { results = trades });
             }
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log do erro para debugging
+                Console.WriteLine($"Erro em GetTrades: {ex.Message}");
+                return StatusCode(500, new { message = "Erro interno do servidor", details = ex.Message });
             }
         }
 

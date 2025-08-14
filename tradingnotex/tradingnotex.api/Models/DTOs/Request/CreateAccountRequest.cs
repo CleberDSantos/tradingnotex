@@ -22,13 +22,45 @@
         public string Notes { get; set; }
     }
 
-    public class AccountFilterRequest
-    {
-        public bool? IsActive { get; set; }
-        public string AccountType { get; set; }
-        public string OrderBy { get; set; } = "-createdAt";
-        public int Limit { get; set; } = 100;
-        public int Skip { get; set; } = 0;
-    }
+
+        public class AccountFilterRequest
+        {
+            /// <summary>
+            /// Tipo de conta para filtrar (opcional)
+            /// </summary>
+            public string? AccountType { get; set; }
+
+            /// <summary>
+            /// Status da conta (opcional)
+            /// </summary>
+            public bool? IsActive { get; set; }
+
+            /// <summary>
+            /// Moeda da conta (opcional)
+            /// </summary>
+            public string? Currency { get; set; }
+
+            /// <summary>
+            /// Corretora (opcional)
+            /// </summary>
+            public string? Broker { get; set; }
+
+            /// <summary>
+            /// Ordenação dos resultados (opcional)
+            /// Exemplo: "name", "-createdAt"
+            /// </summary>
+            public string? OrderBy { get; set; }
+
+            /// <summary>
+            /// Limite de resultados (opcional)
+            /// </summary>
+            public int? Limit { get; set; }
+
+            /// <summary>
+            /// Número de resultados para pular (opcional)
+            /// </summary>
+            public int? Skip { get; set; }
+        }
+    
 }
 

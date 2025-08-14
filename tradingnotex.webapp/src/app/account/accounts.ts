@@ -23,8 +23,79 @@ import { Subject, takeUntil } from 'rxjs';
         </button>
       </header>
 
+      <!-- Filtros e Ordenação -->
+      <section class="flex flex-wrap gap-4 items-center justify-between animate-slide-up" style="animation-delay: .05s">
+        <div class="flex flex-wrap gap-3">
+          <!-- Filtro por Tipo -->
+          <select
+            [(ngModel)]="filters.accountType"
+            (ngModelChange)="loadAccounts()"
+            class="bg-blacker border border-edge rounded-lg px-3 py-2 text-sm focus:border-cyanx focus:outline-none">
+            <option value="">Todos os tipos</option>
+            <option value="real">Real</option>
+            <option value="demo">Demo</option>
+            <option value="prop">Prop Firm</option>
+          </select>
+
+          <!-- Filtro por Status -->
+          <select
+            [(ngModel)]="filters.isActive"
+            (ngModelChange)="loadAccounts()"
+            class="bg-blacker border border-edge rounded-lg px-3 py-2 text-sm focus:border-cyanx focus:outline-none">
+            <option value="">Todos os status</option>
+            <option value="true">Ativas</option>
+            <option value="false">Inativas</option>
+          </select>
+
+          <!-- Filtro por Moeda -->
+          <select
+            [(ngModel)]="filters.currency"
+            (ngModelChange)="loadAccounts()"
+            class="bg-blacker border border-edge rounded-lg px-3 py-2 text-sm focus:border-cyanx focus:outline-none">
+            <option value="">Todas as moedas</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="BRL">BRL</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Ordenação -->
+          <select
+            [(ngModel)]="orderBy"
+            (ngModelChange)="loadAccounts()"
+            class="bg-blacker border border-edge rounded-lg px-3 py-2 text-sm focus:border-cyanx focus:outline-none">
+            <option value="-createdAt">Mais recentes</option>
+            <option value="createdAt">Mais antigas</option>
+            <option value="name">Nome (A-Z)</option>
+            <option value="-name">Nome (Z-A)</option>
+            <option value="-balance">Maior saldo</option>
+            <option value="balance">Menor saldo</option>
+            <option value="-isActive">Ativas primeiro</option>
+          </select>
+
+          <!-- Limite de resultados -->
+          <select
+            [(ngModel)]="limit"
+            (ngModelChange)="loadAccounts()"
+            class="bg-blacker border border-edge rounded-lg px-3 py-2 text-sm focus:border-cyanx focus:outline-none">
+            <option value="25">25 contas</option>
+            <option value="50">50 contas</option>
+            <option value="100">100 contas</option>
+            <option value="0">Todas</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Informações -->
+      <div class="flex items-center justify-between text-sm text-gray-400 animate-slide-up" style="animation-delay: .1s">
+        <span>{{ accounts.length }} conta(s) encontrada(s)</span>
+        <span *ngIf="loading">Carregando...</span>
+      </div>
+
       <!-- Lista de Contas -->
-      <section class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 animate-slide-up" style="animation-delay: .1s">
+      <section class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 animate-slide-up" style="animation-delay: .15s">
         <div *ngFor="let account of accounts"
              class="card p-6 hover:border-cyanx/50 transition-all group">
           <!-- Header do Card -->
@@ -39,6 +110,10 @@ import { Subject, takeUntil } from 'rxjs';
                 <span *ngIf="account.accountType === 'demo'"
                       class="text-xs px-2 py-1 bg-gray-600/20 text-gray-400 rounded-full">
                   DEMO
+                </span>
+                <span *ngIf="account.accountType === 'real'"
+                      class="text-xs px-2 py-1 bg-good/20 text-good rounded-full">
+                  REAL
                 </span>
               </h3>
               <p class="text-sm text-gray-400 mt-1">{{ account.broker || 'Sem corretora' }}</p>
@@ -77,6 +152,10 @@ import { Subject, takeUntil } from 'rxjs';
                 {{ account.isActive ? '✅ Ativa' : '⏸️ Inativa' }}
               </span>
             </div>
+            <div class="flex justify-between" *ngIf="account.createdAt">
+              <span class="text-gray-400">Criada:</span>
+              <span class="font-medium text-xs">{{ formatDate(account.createdAt) }}</span>
+            </div>
           </div>
 
           <!-- Notas -->
@@ -86,20 +165,23 @@ import { Subject, takeUntil } from 'rxjs';
         </div>
 
         <!-- Card Vazio -->
-        <div *ngIf="accounts.length === 0"
+        <div *ngIf="accounts.length === 0 && !loading"
              class="col-span-full card p-12 text-center">
           <div class="text-6xl mb-4">💼</div>
-          <h3 class="text-xl font-semibold text-white mb-2">Nenhuma conta cadastrada</h3>
-          <p class="text-gray-400 mb-6">Adicione sua primeira conta para começar a organizar seus trades</p>
+          <h3 class="text-xl font-semibold text-white mb-2">Nenhuma conta encontrada</h3>
+          <p class="text-gray-400 mb-6">
+            {{ hasFilters() ? 'Tente ajustar os filtros ou' : '' }}
+            Adicione sua primeira conta para começar a organizar seus trades
+          </p>
           <button
             (click)="openModal()"
             class="px-6 py-3 bg-gradient-to-r from-cyanx to-accent hover:from-accent hover:to-cyanx rounded-lg font-medium transition-all">
-            ➕ Adicionar Primeira Conta
+            ➕ {{ hasFilters() ? 'Nova Conta' : 'Adicionar Primeira Conta' }}
           </button>
         </div>
       </section>
 
-      <!-- Modal de Formulário -->
+                <!-- Modal de Formulário -->
       <div *ngIf="showModal"
            class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in"
            (click)="closeModal()">
@@ -283,11 +365,22 @@ export class AccountsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   accounts: Account[] = [];
+  loading = false;
   showModal = false;
   showDeleteModal = false;
   editingAccount: Account | null = null;
   accountToDelete: Account | null = null;
   saving = false;
+
+  // Filtros e ordenação
+  filters = {
+    accountType: '',
+    isActive: '',
+    currency: '',
+    broker: ''
+  };
+  orderBy = '-createdAt';
+  limit = 25;
 
   formData: Account = {
     name: '',
@@ -311,14 +404,44 @@ export class AccountsComponent implements OnInit, OnDestroy {
   }
 
   loadAccounts() {
-    this.accountService.list()
+    this.loading = true;
+
+    const params: any = {
+      OrderBy: this.orderBy
+    };
+
+    // Aplicar limite apenas se não for "Todas"
+    if (this.limit > 0) {
+      params.Limit = this.limit;
+    }
+
+    // Aplicar filtros apenas se selecionados
+    if (this.filters.accountType) {
+      params.AccountType = this.filters.accountType;
+    }
+
+    if (this.filters.isActive !== '') {
+      params.IsActive = this.filters.isActive === 'true';
+    }
+
+    if (this.filters.currency) {
+      params.Currency = this.filters.currency;
+    }
+
+    if (this.filters.broker) {
+      params.Broker = this.filters.broker;
+    }
+
+    this.accountService.list(params)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.accounts = response.results || [];
+          this.loading = false;
         },
         error: (error) => {
           console.error('Erro ao carregar contas:', error);
+          this.loading = false;
         }
       });
   }
@@ -398,11 +521,28 @@ export class AccountsComponent implements OnInit, OnDestroy {
     };
   }
 
+  hasFilters(): boolean {
+    return !!(this.filters.accountType || this.filters.isActive || this.filters.currency || this.filters.broker);
+  }
+
   formatCurrency(value: number, currency: string): string {
     const formatter = new Intl.NumberFormat('pt-PT', {
       style: 'currency',
       currency: currency
     });
     return formatter.format(value);
+  }
+
+  formatDate(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
   }
 }

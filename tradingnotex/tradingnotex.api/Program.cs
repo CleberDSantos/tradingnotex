@@ -1,12 +1,13 @@
-using TradingNoteX.Models.Settings;
-using TradingNoteX.Services.Interfaces;
-using TradingNoteX.Services.Implementations;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using MongoDB.Driver;
 using Serilog;
 using System.Reflection;
-using MongoDB.Driver;
 using TradingNoteX.Models.Entities;
-using Microsoft.Extensions.Options;
+using TradingNoteX.Models.Settings;
+using TradingNoteX.Services.Implementations;
+using TradingNoteX.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +30,8 @@ builder.Services.AddScoped<IImportService, ImportService>();
 builder.Services.AddScoped<IRiskSettingsService, RiskSettingsService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICloudFunctionsService, CloudFunctionsService>();
-builder.Services.AddScoped<IAIAnalysisService, AIAnalysisService>(); 
-builder.Services.AddScoped<HttpClient, HttpClient>(); 
+builder.Services.AddScoped<IAIAnalysisService, AIAnalysisService>();
+builder.Services.AddScoped<HttpClient, HttpClient>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -44,7 +45,40 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddControllers();
+// Configure controllers with custom validation behavior
+builder.Services.AddControllers(options =>
+{
+    // Desabilitar validação automática para permitir filtros opcionais
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+})
+.ConfigureApiBehaviorOptions(options =>
+{
+    // Configurar comportamento customizado para respostas de validação
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        // Log para debugging
+        var errors = context.ModelState
+            .Where(x => x.Value.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        Console.WriteLine($"Validation errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+
+        var result = new BadRequestObjectResult(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors = errors,
+            traceId = context.HttpContext.TraceIdentifier
+        });
+
+        return result;
+    };
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -54,7 +88,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API para journal de trades (SMC), gestão de risco e parciais"
     });
-    
+
     c.AddSecurityDefinition("SessionToken", new OpenApiSecurityScheme
     {
         Description = "Session Token",
@@ -62,7 +96,7 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey
     });
-    
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
