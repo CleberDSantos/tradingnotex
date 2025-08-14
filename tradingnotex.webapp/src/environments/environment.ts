@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://localhost:44368'
+  apiBaseUrl: 'https://tradenotexapi.azurewebsites.net'
 };
