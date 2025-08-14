@@ -8,7 +8,7 @@ import { AchievementsComponent } from './achievements/achievements';
 import { TradeDetail } from './trade-detail/trade-detail';
 import { TradeMaintenance } from './trade-maintenance/trade-maintenance';
 import { TraderQuestComponent } from './trader-quest/trader-quest.component';
-// import { ProfileComponent } from './profile/profile.component';
+import { ProfileComponent } from './profile/profile.component';
 import { Logout } from './logout/logout';
 import { authGuard } from './auth-guard';
 import { AccountsComponent } from './account/accounts';
@@ -22,7 +22,7 @@ export const routes: Routes = [
   { path: 'quest', component: TraderQuestComponent, canActivate: [authGuard] },
   { path: 'achievements', component: AchievementsComponent, canActivate: [authGuard] },
   { path: 'accounts', component: AccountsComponent, canActivate: [authGuard] },
-  // { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
+  { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
   { path: 'trade/:id', component: TradeDetail, canActivate: [authGuard] },
   { path: 'trade-maintenance', component: TradeMaintenance, canActivate: [authGuard] },
   { path: 'logout', component: Logout },
