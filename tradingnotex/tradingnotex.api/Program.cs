@@ -27,6 +27,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<IImportService, ImportService>();
 builder.Services.AddScoped<IRiskSettingsService, RiskSettingsService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICloudFunctionsService, CloudFunctionsService>();
 builder.Services.AddScoped<IAIAnalysisService, AIAnalysisService>(); 
 builder.Services.AddScoped<HttpClient, HttpClient>(); 

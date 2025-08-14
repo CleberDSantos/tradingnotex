@@ -8,5 +8,7 @@ namespace TradingNoteX.Models.Settings
         public string ImportsCollection { get; set; } = "Imports";
         public string RiskSettingsCollection { get; set; } = "RiskSettings";
         public string UsersCollection { get; set; } = "Users";
+
+        public string AccountsCollection { get; set; } = "Accounts";
     }
 }

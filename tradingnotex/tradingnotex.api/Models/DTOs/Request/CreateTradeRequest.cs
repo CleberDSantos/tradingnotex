@@ -9,6 +9,7 @@
         public int? DurationMin { get; set; }
         public string Setup { get; set; } = "SMC";
         public string TradeStatus { get; set; }       // opcional; se vazio, derivamos do P/L
+        public string AccountId { get; set; }         // Novo: conta associada ao trade
 
         // O resto é opcional no formulário
         public decimal? OpenPrice { get; set; }

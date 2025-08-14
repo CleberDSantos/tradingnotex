@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using tradingnotex.api.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
+using TradingNoteX.Services.Implementations;
 using TradingNoteX.Services.Interfaces;
 
 namespace TradingNoteX.Controllers
@@ -16,13 +20,18 @@ namespace TradingNoteX.Controllers
     {
         private readonly ITradeService _tradeService;
         private readonly IAuthService _authService;
-        
-        public TradesController(ITradeService tradeService, IAuthService authService)
+        private readonly IAccountService _accountService; // Added missing dependency
+
+        public TradesController(
+            ITradeService tradeService,
+            IAuthService authService,
+            IAccountService accountService) // Added to constructor
         {
             _tradeService = tradeService;
             _authService = authService;
+            _accountService = accountService;
         }
-        
+
         private async Task<string> GetUserIdAsync()
         {
             var sessionToken = Request.Headers["X-Parse-Session-Token"].FirstOrDefault();
@@ -32,7 +41,7 @@ namespace TradingNoteX.Controllers
             }
             return await _authService.ValidateSessionAsync(sessionToken);
         }
-        
+
         [HttpGet]
         public async Task<IActionResult> GetTrades([FromQuery] TradeFilterRequest filter)
         {
@@ -47,7 +56,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpGet("{objectId}")]
         public async Task<IActionResult> GetTrade(string objectId)
         {
@@ -55,12 +64,12 @@ namespace TradingNoteX.Controllers
             {
                 var userId = await GetUserIdAsync();
                 var trade = await _tradeService.GetTradeByIdAsync(objectId, userId);
-                
+
                 if (trade == null)
                 {
                     return NotFound();
                 }
-                
+
                 return Ok(trade);
             }
             catch (UnauthorizedAccessException ex)
@@ -68,7 +77,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpPost]
         public async Task<IActionResult> CreateTrade([FromBody] CreateTradeRequest trade)
         {
@@ -83,7 +92,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpPut("{objectId}")]
         public async Task<IActionResult> UpdateTrade(string objectId, [FromBody] Trade trade)
         {
@@ -98,7 +107,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpPut("{objectId}/details")]
         public async Task<IActionResult> UpdateTradeDetails(string objectId, [FromBody] UpdateTradeDetailsRequest request)
         {
@@ -113,7 +122,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpDelete("{objectId}")]
         public async Task<IActionResult> DeleteTrade(string objectId)
         {
@@ -121,12 +130,12 @@ namespace TradingNoteX.Controllers
             {
                 var userId = await GetUserIdAsync();
                 var deleted = await _tradeService.DeleteTradeAsync(objectId, userId);
-                
+
                 if (!deleted)
                 {
                     return NotFound();
                 }
-                
+
                 return Ok(new { deleted = true });
             }
             catch (UnauthorizedAccessException ex)
@@ -134,7 +143,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpGet("{objectId}/comments")]
         public async Task<IActionResult> GetComments(string objectId)
         {
@@ -149,7 +158,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpPost("{objectId}/comments")]
         public async Task<IActionResult> AddComment(string objectId, [FromBody] AddCommentRequest request)
         {
@@ -164,7 +173,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpPost("{objectId}/comments/{commentId}/analyze")]
         public async Task<IActionResult> AnalyzeComment(string objectId, string commentId)
         {
@@ -183,7 +192,7 @@ namespace TradingNoteX.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
-        
+
         [HttpDelete("{objectId}/comments/{commentId}")]
         public async Task<IActionResult> DeleteComment(string objectId, string commentId)
         {
@@ -191,12 +200,12 @@ namespace TradingNoteX.Controllers
             {
                 var userId = await GetUserIdAsync();
                 var deleted = await _tradeService.DeleteCommentAsync(objectId, userId, commentId);
-                
+
                 if (!deleted)
                 {
                     return NotFound();
                 }
-                
+
                 return Ok(new { deleted = true });
             }
             catch (UnauthorizedAccessException ex)
@@ -204,7 +213,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpGet("kpis")]
         public async Task<IActionResult> GetKPIs([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
@@ -219,7 +228,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpGet("heatmap")]
         public async Task<IActionResult> GetHourlyHeatmap()
         {
@@ -234,7 +243,7 @@ namespace TradingNoteX.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
-        
+
         [HttpGet("insights")]
         public async Task<IActionResult> GetInsights()
         {
@@ -243,6 +252,40 @@ namespace TradingNoteX.Controllers
                 var userId = await GetUserIdAsync();
                 var insights = await _tradeService.GetInsightsAsync(userId);
                 return Ok(insights);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("instruments")]
+        public async Task<IActionResult> GetInstruments([FromQuery] string accountId = null)
+        {
+            try
+            {
+                var userId = await GetUserIdAsync();
+
+                // Use trade service to get instruments instead of direct MongoDB access
+                var instruments = await _tradeService.GetInstrumentsAsync(userId, accountId);
+                return Ok(instruments);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("stats/by-account")]
+        public async Task<IActionResult> GetStatsByAccount()
+        {
+            try
+            {
+                var userId = await GetUserIdAsync();
+
+                // Use trade service to get stats by account
+                var statsByAccount = await _tradeService.GetStatsByAccountAsync(userId);
+                return Ok(statsByAccount);
             }
             catch (UnauthorizedAccessException ex)
             {

@@ -25,5 +25,8 @@ namespace TradingNoteX.Services.Interfaces
         Task<Comment> AnalyzeCommentAsync(string tradeId, string userId, string commentId);
         Task<List<Comment>> GetCommentsAsync(string tradeId, string userId);
         Task<bool> DeleteCommentAsync(string tradeId, string userId, string commentId);
+
+        Task<List<object>> GetInstrumentsAsync(string userId, string accountId = null);
+        Task<object> GetStatsByAccountAsync(string userId);
     }
 }

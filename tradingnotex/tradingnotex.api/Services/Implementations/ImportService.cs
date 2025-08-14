@@ -1,14 +1,12 @@
-// tradingnotex/tradingnotex.api/Services/Implementations/ImportService.cs
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using TradingNoteX.Models.DTOs.Request;
 using TradingNoteX.Models.DTOs.Response;
 using TradingNoteX.Models.Entities;
@@ -19,195 +17,187 @@ namespace TradingNoteX.Services.Implementations
 {
     public class ImportService : IImportService
     {
-        private readonly IMongoCollection<Import> _imports;
         private readonly IMongoCollection<Trade> _trades;
+        private readonly IMongoCollection<Import> _imports;
+        private readonly IAccountService _accountService;
         private readonly ILogger<ImportService> _logger;
 
         public ImportService(
             IOptions<MongoDbSettings> settings,
+            IAccountService accountService,
             ILogger<ImportService> logger)
         {
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
-            _imports = database.GetCollection<Import>(settings.Value.ImportsCollection);
             _trades = database.GetCollection<Trade>(settings.Value.TradesCollection);
+            _imports = database.GetCollection<Import>(settings.Value.ImportsCollection);
+            _accountService = accountService;
             _logger = logger;
-
-            // Índice (não-único) p/ acelerar a dedupe simples
-            try
-            {
-                var idx = new CreateIndexModel<Trade>(
-                    Builders<Trade>.IndexKeys
-                        .Ascending(t => t.OwnerId)
-                        .Ascending(t => t.ExecutedAtUTC)
-                        .Ascending(t => t.Instrument)
-                        .Ascending(t => t.Side)
-                        .Ascending(t => t.TradeStatus)
-                        .Ascending(t => t.RealizedPLEUR),
-                    new CreateIndexOptions { Name = "ix_dedupe_simple" }
-                );
-                _trades.Indexes.CreateOne(idx);
-            }
-            catch (MongoCommandException)
-            {
-                // ok se já existir
-            }
         }
 
         public async Task<ImportTradesResponse> ImportTradesAsync(ImportTradesRequest request, string userId)
         {
-            try
+            // Validar se a conta existe e pertence ao usuário (se especificada)
+            if (!string.IsNullOrEmpty(request.AccountId))
             {
-                if (request.Trades == null || !request.Trades.Any())
-                    throw new InvalidOperationException("Nenhum trade para importar");
-
-                // Parse opcional de StatementDate
-                DateTime? statementDate = null;
-                if (!string.IsNullOrWhiteSpace(request.StatementDateISO) &&
-                    DateTime.TryParse(request.StatementDateISO, null, DateTimeStyles.AdjustToUniversal, out var stmt))
+                var accountExists = await _accountService.AccountExistsAsync(request.AccountId, userId);
+                if (!accountExists)
                 {
-                    statementDate = stmt;
+                    throw new InvalidOperationException($"Conta com ID '{request.AccountId}' não encontrada ou não pertence ao usuário");
                 }
+            }
 
-                // Cria registro de importação
-                var import = new Import
+            // Criar registro de importação
+            var import = new Import
+            {
+                Name = request.Name ?? $"Import {DateTime.UtcNow:yyyy-MM-dd HH:mm}",
+                StatementDate = request.StatementDateISO,
+                Source = "api",
+                Count = request.Trades?.Count ?? 0,
+                OwnerId = userId,
+                AccountId = request.AccountId, // Associar com conta
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ACL = new Dictionary<string, ACLPermission>
                 {
-                    Name = request.Name ?? $"Import_{DateTime.UtcNow:yyyyMMdd_HHmmss}",
-                    StatementDate = statementDate,
-                    Source = "manual",
-                    Count = request.Trades.Count,
-                    OwnerId = userId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    ACL = new Dictionary<string, ACLPermission>
-                    {
-                        { userId, new ACLPermission { Read = true, Write = true } }
-                    }
-                };
+                    { userId, new ACLPermission { Read = true, Write = true } }
+                }
+            };
 
-                await _imports.InsertOneAsync(import);
+            await _imports.InsertOneAsync(import);
 
-                var created = 0;
-                var skipped = 0;
-                var tradesToInsert = new List<Trade>(request.Trades.Count);
+            var created = 0;
+            var skipped = 0;
 
-                foreach (var item in request.Trades)
+            if (request.Trades != null && request.Trades.Any())
+            {
+                foreach (var tradeData in request.Trades)
                 {
-                    // Validação mínima
-                    if (string.IsNullOrWhiteSpace(item?.Instrument))
-                    {
-                        _logger.LogWarning("Trade sem instrumento, pulando.");
-                        skipped++;
-                        continue;
-                    }
-
-                    // Normalizações
-                    if (!TryParseUtc(item.ExecutedAtUTC, out var executedAt))
-                        executedAt = DateTime.UtcNow;
-
-                    var instr = NormInstr(item.Instrument);
-                    var side = NormSide(item.Side);
-                    var status = (item.RealizedPLEUR >= 0m) ? "Vencedor" : "Perdedor";
-                    var pl2 = Round2(item.RealizedPLEUR);
-
-                    // Janela do minuto para comparar (ignora segundos)
-                    var execMinStart = TruncToMinuteUtc(executedAt);
-                    var execMinEnd = execMinStart.AddMinutes(1);
-
-                    var eps = 0.005m;              // meia casa de centavo
-                    var plLow = pl2 - eps;
-                    var plHigh = pl2 + eps;
-
-                    var dupFilter = Builders<Trade>.Filter.And(
-                        Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
-                        Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, execMinStart),
-                        Builders<Trade>.Filter.Lt(t => t.ExecutedAtUTC, execMinEnd),
-                        Builders<Trade>.Filter.Eq(t => t.Instrument, instr),
-                        Builders<Trade>.Filter.Eq(t => t.Side, side),
-                        Builders<Trade>.Filter.Eq(t => t.TradeStatus, status),
-                        Builders<Trade>.Filter.Gte(t => t.RealizedPLEUR, plLow),
-                        Builders<Trade>.Filter.Lt(t => t.RealizedPLEUR, plHigh)
+                    // Verificar duplicação
+                    var isDuplicate = await IsDuplicateTradeAsync(
+                        tradeData.ExecutedAtUTC,
+                        tradeData.Instrument,
+                        tradeData.Side,
+                        tradeData.RealizedPLEUR,
+                        userId,
+                        request.AccountId
                     );
 
-                    var alreadyExists = await _trades.Find(dupFilter).Limit(1).AnyAsync();
-                    if (alreadyExists)
+                    if (isDuplicate)
                     {
-                        _logger.LogInformation(
-                            "Trade duplicado ignorado: {Time} {Instr} {Side} PL={PL} Status={Status}",
-                            execMinStart, instr, side, pl2.ToString("F2", CultureInfo.InvariantCulture), status
-                        );
                         skipped++;
+                        _logger.LogInformation($"Trade duplicado ignorado: {tradeData.ExecutedAtUTC} {tradeData.Instrument}");
                         continue;
                     }
 
-                    // Mapeia para entidade completa
+                    // Criar novo trade
                     var trade = new Trade
                     {
-                        ObjectId = ObjectId.GenerateNewId().ToString(),
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        ExecutedAtUTC = executedAt,
-
-                        Instrument = instr,
-                        Side = side,
-                        RealizedPLEUR = item.RealizedPLEUR,
-                        DurationMin = item.DurationMin,
-
-                        Setup = string.IsNullOrWhiteSpace(item.Setup) ? "SMC" : item.Setup.Trim(),
-                        Emotion = new TradeEmotion { Mood = "neutral", Arousal = "calm" },
-
+                        ExecutedAtUTC = tradeData.ExecutedAtUTC,
+                        Instrument = tradeData.Instrument,
+                        Side = tradeData.Side,
+                        RealizedPLEUR = tradeData.RealizedPLEUR,
+                        DurationMin = tradeData.DurationMin,
+                        Setup = string.IsNullOrEmpty(tradeData.Setup) ? "SMC" : tradeData.Setup,
+                        Notes = tradeData.Notes ?? "",
+                        Tags = tradeData.Tags ?? new List<string>(),
                         ImportId = import.ObjectId,
                         OwnerId = userId,
+                        AccountId = request.AccountId, // Associar com conta
+                        YoutubeLink = tradeData.YoutubeLink ?? "",
+                        DailyGoalReached = tradeData.DailyGoalReached ?? false,
+                        DailyLossReached = tradeData.DailyLossReached ?? false,
+                        Greed = tradeData.Greed ?? false,
+                        OpenPrice = tradeData.OpenPrice,
+                        ExecPrice = tradeData.ExecPrice,
+                        StopPrice = tradeData.StopPrice,
+                        TargetPrice = tradeData.TargetPrice,
+                        Spread = tradeData.Spread,
+                        OtherFees = tradeData.OtherFees,
+                        EntryType = tradeData.EntryType ?? 50,
+                        Emotion = new TradeEmotion { Mood = "neutral", Arousal = "calm" },
+                        Comments = new List<Comment>(),
+                        ChartScreenshots = new List<ChartScreenshot>(),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
                         ACL = new Dictionary<string, ACLPermission>
                         {
                             { userId, new ACLPermission { Read = true, Write = true } }
-                        },
-
-                        OpenPrice = item.OpenPrice,
-                        ExecPrice = item.ExecPrice,
-                        Spread = item.Spread,
-                        OtherFees = item.OtherFees,
-
-                        EntryType = 50,
-                        Greed = false,
-                        YoutubeLink = null,
-
-                        Comments = new List<Comment>(),
-                        DailyGoalReached = item.DailyGoalReached ?? false,
-                        DailyLossReached = item.DailyLossReached ?? false,
-
-                        TradeStatus = status,
-                        ChartScreenshots = new List<ChartScreenshot>(),
-
-                        Notes = item.Notes,
-                        Tags = item.Tags ?? new List<string>()
+                        }
                     };
 
-                    tradesToInsert.Add(trade);
+                    // Determinar status do trade
+                    if (string.IsNullOrEmpty(trade.TradeStatus))
+                    {
+                        trade.TradeStatus = trade.RealizedPLEUR >= 0 ? "winner" : "loser";
+                    }
+
+                    await _trades.InsertOneAsync(trade);
                     created++;
                 }
-
-                if (tradesToInsert.Any())
-                    await _trades.InsertManyAsync(tradesToInsert);
-
-                // Atualiza a contagem final criada
-                import.Count = created;
-                await _imports.ReplaceOneAsync(i => i.ObjectId == import.ObjectId, import);
-
-                _logger.LogInformation("Importação concluída: {Created} trades criados, {Skipped} pulados", created, skipped);
-
-                return new ImportTradesResponse
-                {
-                    ImportId = import.ObjectId,
-                    Created = created,
-                    Skipped = skipped
-                };
             }
-            catch (Exception ex)
+
+            // Atualizar contagem no registro de importação
+            await _imports.UpdateOneAsync(
+                Builders<Import>.Filter.Eq(i => i.ObjectId, import.ObjectId),
+                Builders<Import>.Update
+                    .Set(i => i.Count, created)
+                    .Set(i => i.UpdatedAt, DateTime.UtcNow)
+            );
+
+            return new ImportTradesResponse
             {
-                _logger.LogError(ex, "Erro ao importar trades");
-                throw;
+                ImportId = import.ObjectId,
+                Created = created,
+                Skipped = skipped
+            };
+        }
+
+        private async Task<bool> IsDuplicateTradeAsync(
+            DateTime executedAt,
+            string instrument,
+            string side,
+            decimal realizedPL,
+            string userId,
+            string accountId)
+        {
+            // Verificar trades no mesmo minuto, mesmo instrumento, side, P/L e conta
+            var startMinute = new DateTime(
+                executedAt.Year,
+                executedAt.Month,
+                executedAt.Day,
+                executedAt.Hour,
+                executedAt.Minute,
+                0,
+                DateTimeKind.Utc
+            );
+            var endMinute = startMinute.AddMinutes(1);
+
+            var filterBuilder = Builders<Trade>.Filter;
+            var filters = new List<FilterDefinition<Trade>>
+            {
+                filterBuilder.Eq(t => t.OwnerId, userId),
+                filterBuilder.Gte(t => t.ExecutedAtUTC, startMinute),
+                filterBuilder.Lt(t => t.ExecutedAtUTC, endMinute),
+                filterBuilder.Eq(t => t.Instrument, instrument),
+                filterBuilder.Eq(t => t.Side, side)
+            };
+
+            // Adicionar filtro de conta se especificada
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                filters.Add(filterBuilder.Eq(t => t.AccountId, accountId));
             }
+
+            // Verificar P/L com tolerância
+            var plTolerance = 0.01m;
+            filters.Add(filterBuilder.Gte(t => t.RealizedPLEUR, realizedPL - plTolerance));
+            filters.Add(filterBuilder.Lte(t => t.RealizedPLEUR, realizedPL + plTolerance));
+
+            var filter = filterBuilder.And(filters);
+            var count = await _trades.CountDocumentsAsync(filter);
+
+            return count > 0;
         }
 
         public async Task<List<Import>> GetImportsAsync(string userId)
@@ -230,53 +220,26 @@ namespace TradingNoteX.Services.Implementations
 
         public async Task<bool> DeleteImportAsync(string importId, string userId)
         {
-            // Deleta trades relacionados
+            // Primeiro, deletar todos os trades associados
             var tradesFilter = Builders<Trade>.Filter.And(
                 Builders<Trade>.Filter.Eq(t => t.ImportId, importId),
                 Builders<Trade>.Filter.Eq(t => t.OwnerId, userId)
             );
+
             await _trades.DeleteManyAsync(tradesFilter);
 
-            // Deleta registro de importação
+            // Depois, deletar o registro de importação
             var importFilter = Builders<Import>.Filter.And(
                 Builders<Import>.Filter.Eq(i => i.ObjectId, importId),
                 Builders<Import>.Filter.Eq(i => i.OwnerId, userId)
             );
-            var result = await _imports.DeleteOneAsync(importFilter);
 
+            var result = await _imports.DeleteOneAsync(importFilter);
             return result.DeletedCount > 0;
         }
 
-        // ===================== Helpers =====================
-
-        private static bool TryParseUtc(string value, out DateTime dtUtc)
-        {
-            dtUtc = default;
-            if (string.IsNullOrWhiteSpace(value)) return false;
-
-            if (DateTime.TryParse(value, null, DateTimeStyles.AdjustToUniversal, out var dt))
-            {
-                if (dt.Kind != DateTimeKind.Utc) dt = dt.ToUniversalTime();
-                return (dtUtc = dt) != default;
-            }
-            return false;
-        }
-
-        private static DateTime TruncToMinuteUtc(DateTime dt)
-        {
-            var utc = dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime();
-            return new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, 0, DateTimeKind.Utc);
-        }
-
-        private static string NormInstr(string s) => (s ?? "").Trim().ToUpperInvariant();
-
-        private static string NormSide(string side)
-        {
-            var s = (side ?? "buy").Trim().ToLowerInvariant();
-            return (s == "buy" || s == "sell") ? s : "buy";
-        }
-
-        private static decimal Round2(decimal v) =>
-            Math.Round(v, 2, MidpointRounding.AwayFromZero);
+       
     }
+
+   
 }

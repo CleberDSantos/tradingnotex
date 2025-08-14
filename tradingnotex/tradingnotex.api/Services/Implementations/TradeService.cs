@@ -24,11 +24,15 @@ namespace TradingNoteX.Services.Implementations
         private readonly IAIAnalysisService _aiAnalysisService;
         private readonly ILogger<TradeService> _logger;
         private readonly IMongoCollection<Import> _imports;
+        private readonly IAccountService _accountService;
+
+
 
         public TradeService(
             IOptions<MongoDbSettings> settings,
             IAIAnalysisService aiAnalysisService,
-            ILogger<TradeService> logger)
+            ILogger<TradeService> logger,
+            IAccountService accountService)
         {
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
@@ -36,6 +40,7 @@ namespace TradingNoteX.Services.Implementations
             _aiAnalysisService = aiAnalysisService;
             _logger = logger;
             _imports = database.GetCollection<Import>(settings.Value.ImportsCollection);
+            _accountService = accountService;
         }
 
         public async Task<Trade> UpdateTradeDetailsAsync(string tradeId, string userId, UpdateTradeDetailsRequest request)
@@ -48,7 +53,19 @@ namespace TradingNoteX.Services.Implementations
             var update = Builders<Trade>.Update;
             var updates = new List<UpdateDefinition<Trade>>();
 
-            // Atualizar preços e níveis
+            // Atualizar conta se especificada
+            if (!string.IsNullOrEmpty(request.AccountId))
+            {
+                // Validar se a conta existe
+                var accountExists = await _accountService.AccountExistsAsync(request.AccountId, userId);
+                if (!accountExists)
+                {
+                    throw new InvalidOperationException($"Conta com ID '{request.AccountId}' não encontrada");
+                }
+                updates.Add(update.Set(t => t.AccountId, request.AccountId));
+            }
+
+            // Resto dos campos...
             if (request.OpenPrice.HasValue)
                 updates.Add(update.Set(t => t.OpenPrice, request.OpenPrice.Value));
 
@@ -67,7 +84,6 @@ namespace TradingNoteX.Services.Implementations
             if (request.OtherFees.HasValue)
                 updates.Add(update.Set(t => t.OtherFees, request.OtherFees.Value));
 
-            // Atualizar comportamento
             if (request.EntryType.HasValue)
                 updates.Add(update.Set(t => t.EntryType, request.EntryType.Value));
 
@@ -77,7 +93,6 @@ namespace TradingNoteX.Services.Implementations
             if (request.YoutubeLink != null)
                 updates.Add(update.Set(t => t.YoutubeLink, request.YoutubeLink));
 
-            // Atualizar status
             if (request.DailyGoalReached.HasValue)
                 updates.Add(update.Set(t => t.DailyGoalReached, request.DailyGoalReached.Value));
 
@@ -130,6 +145,16 @@ namespace TradingNoteX.Services.Implementations
             if (string.IsNullOrWhiteSpace(request?.Instrument))
                 throw new ArgumentException("Instrument é obrigatório.");
 
+            // Validar conta se especificada
+            if (!string.IsNullOrEmpty(request.AccountId))
+            {
+                var accountExists = await _accountService.AccountExistsAsync(request.AccountId, userId);
+                if (!accountExists)
+                {
+                    throw new InvalidOperationException($"Conta com ID '{request.AccountId}' não encontrada");
+                }
+            }
+
             // Normalizações
             var executedAt = request.ExecutedAtUTC.Kind == DateTimeKind.Utc
                 ? request.ExecutedAtUTC
@@ -142,38 +167,48 @@ namespace TradingNoteX.Services.Implementations
 
             var status = !string.IsNullOrWhiteSpace(request.TradeStatus)
                 ? request.TradeStatus.Trim()
-                : (request.RealizedPLEUR >= 0m ? "Vencedor" : "Perdedor");
+                : (request.RealizedPLEUR >= 0m ? "winner" : "loser");
 
-            // (Opcional) Dedupe simples por trade manual (mesma minute-window, mesmo instrumento/side/PL/status)
-            var execMinStart = new DateTime(executedAt.Year, executedAt.Month, executedAt.Day, executedAt.Hour, executedAt.Minute, 0, DateTimeKind.Utc);
+            // Verificar duplicação (incluindo accountId)
+            var execMinStart = new DateTime(executedAt.Year, executedAt.Month, executedAt.Day,
+                executedAt.Hour, executedAt.Minute, 0, DateTimeKind.Utc);
             var execMinEnd = execMinStart.AddMinutes(1);
             var pl2 = Math.Round(request.RealizedPLEUR, 2, MidpointRounding.AwayFromZero);
 
-            var eps = 0.005m;              // meia casa de centavo
+            var eps = 0.005m;
             var plLow = pl2 - eps;
             var plHigh = pl2 + eps;
 
-            var dupFilter = Builders<Trade>.Filter.And(
-                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
-                Builders<Trade>.Filter.Gte(t => t.ExecutedAtUTC, execMinStart),
-                Builders<Trade>.Filter.Lt(t => t.ExecutedAtUTC, execMinEnd),
-                Builders<Trade>.Filter.Eq(t => t.Instrument, instrument),
-                Builders<Trade>.Filter.Eq(t => t.Side, side),
-                Builders<Trade>.Filter.Eq(t => t.TradeStatus, status),
-                Builders<Trade>.Filter.Gte(t => t.RealizedPLEUR, plLow),
-                Builders<Trade>.Filter.Lt(t => t.RealizedPLEUR, plHigh)
-            );
+            var dupFilterBuilder = Builders<Trade>.Filter;
+            var dupFilters = new List<FilterDefinition<Trade>>
+    {
+        dupFilterBuilder.Eq(t => t.OwnerId, userId),
+        dupFilterBuilder.Gte(t => t.ExecutedAtUTC, execMinStart),
+        dupFilterBuilder.Lt(t => t.ExecutedAtUTC, execMinEnd),
+        dupFilterBuilder.Eq(t => t.Instrument, instrument),
+        dupFilterBuilder.Eq(t => t.Side, side),
+        dupFilterBuilder.Eq(t => t.TradeStatus, status),
+        dupFilterBuilder.Gte(t => t.RealizedPLEUR, plLow),
+        dupFilterBuilder.Lt(t => t.RealizedPLEUR, plHigh)
+    };
+
+            // Adicionar filtro de conta na verificação de duplicação
+            if (!string.IsNullOrEmpty(request.AccountId))
+            {
+                dupFilters.Add(dupFilterBuilder.Eq(t => t.AccountId, request.AccountId));
+            }
+
+            var dupFilter = dupFilterBuilder.And(dupFilters);
 
             var exists = await _trades.Find(dupFilter).Limit(1).AnyAsync();
             if (exists)
             {
-                _logger.LogInformation("CreateTrade ignorado (duplicado): {Time} {Instr} {Side} PL={PL} {Status}",
-                    execMinStart, instrument, side, pl2.ToString("F2", CultureInfo.InvariantCulture), status);
-                // Pode retornar o registro existente, ou lançar 409. Aqui vou retornar o existente.
+                _logger.LogInformation("CreateTrade ignorado (duplicado): {Time} {Instr} {Side} PL={PL} {Status} Account={Account}",
+                    execMinStart, instrument, side, pl2.ToString("F2", CultureInfo.InvariantCulture), status, request.AccountId);
                 return await _trades.Find(dupFilter).FirstOrDefaultAsync();
             }
 
-            // Criar/usar um Import "Manual" para vincular entradas do formulário
+            // Criar Import "Manual" para vincular entradas do formulário
             var import = new Import
             {
                 Name = $"Manual Form {DateTime.UtcNow:yyyy-MM-dd}",
@@ -181,42 +216,38 @@ namespace TradingNoteX.Services.Implementations
                 Source = "manual-form",
                 Count = 1,
                 OwnerId = userId,
+                AccountId = request.AccountId, // Associar com conta
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 ACL = new Dictionary<string, ACLPermission>
-                {
-                    { userId, new ACLPermission { Read = true, Write = true } }
-                }
+        {
+            { userId, new ACLPermission { Read = true, Write = true } }
+        }
             };
             await _imports.InsertOneAsync(import);
 
-            // Montar entidade completa com defaults para campos "required"
+            // Montar entidade completa
             var entity = new Trade
             {
                 ObjectId = ObjectId.GenerateNewId().ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 ExecutedAtUTC = executedAt,
-
                 Instrument = instrument,
                 Side = side,
                 RealizedPLEUR = request.RealizedPLEUR,
                 DurationMin = request.DurationMin,
                 Setup = string.IsNullOrWhiteSpace(request.Setup) ? "SMC" : request.Setup.Trim(),
-
-                // Campos obrigatórios que causavam 400:
+                AccountId = request.AccountId, // Associar com conta
                 Emotion = new TradeEmotion { Mood = "neutral", Arousal = "calm" },
-                Notes = "",                // default vazio para não quebrar validação
-                YoutubeLink = "",          // idem
-
+                Notes = "",
+                YoutubeLink = "",
                 ImportId = import.ObjectId,
                 OwnerId = userId,
                 ACL = new Dictionary<string, ACLPermission>
-                {
-                    { userId, new ACLPermission { Read = true, Write = true } }
-                },
-
-                // Opcionais do formulário
+        {
+            { userId, new ACLPermission { Read = true, Write = true } }
+        },
                 OpenPrice = request.OpenPrice,
                 ExecPrice = request.ExecPrice,
                 StopPrice = request.StopPrice,
@@ -227,9 +258,7 @@ namespace TradingNoteX.Services.Implementations
                 DailyGoalReached = request.DailyGoalReached,
                 DailyLossReached = request.DailyLossReached,
                 Greed = request.Greed,
-
                 TradeStatus = status,
-
                 Comments = new List<Comment>(),
                 ChartScreenshots = new List<ChartScreenshot>()
             };
@@ -237,19 +266,31 @@ namespace TradingNoteX.Services.Implementations
             await _trades.InsertOneAsync(entity);
             return entity;
         }
-    
+
 
         public async Task<List<Trade>> GetTradesAsync(string userId, TradeFilterRequest filter)
         {
             var filterBuilder = Builders<Trade>.Filter;
             var filters = new List<FilterDefinition<Trade>>
-            {
-                filterBuilder.Eq(t => t.OwnerId, userId)
-            };
+    {
+        filterBuilder.Eq(t => t.OwnerId, userId)
+    };
 
-            if (!string.IsNullOrEmpty(filter.Instrument) &&
-                filter.Instrument.Trim() != "" &&
-                filter.Instrument.ToUpper() != "ALL")
+            // Filtro por conta
+            if (!string.IsNullOrEmpty(filter.AccountId))
+            {
+                filters.Add(filterBuilder.Eq(t => t.AccountId, filter.AccountId));
+            }
+
+            // Filtro por múltiplos instrumentos
+            if (filter.Instruments != null && filter.Instruments.Any())
+            {
+                filters.Add(filterBuilder.In(t => t.Instrument, filter.Instruments));
+            }
+            // Se não há múltiplos instrumentos, verificar filtro único
+            else if (!string.IsNullOrEmpty(filter.Instrument) &&
+                     filter.Instrument.Trim() != "" &&
+                     filter.Instrument.ToUpper() != "ALL")
             {
                 filters.Add(filterBuilder.Eq(t => t.Instrument, filter.Instrument));
             }
@@ -277,6 +318,26 @@ namespace TradingNoteX.Services.Implementations
                 .Skip(filter.Skip)
                 .Limit(filter.Limit)
                 .ToListAsync();
+        }
+
+        public async Task<List<string>> GetUniqueInstrumentsAsync(string userId, string accountId = null)
+        {
+            var filterBuilder = Builders<Trade>.Filter;
+            var filters = new List<FilterDefinition<Trade>>
+    {
+        filterBuilder.Eq(t => t.OwnerId, userId)
+    };
+
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                filters.Add(filterBuilder.Eq(t => t.AccountId, accountId));
+            }
+
+            var filter = filterBuilder.And(filters);
+
+            var instruments = await _trades.Distinct<string>("instrument", filter).ToListAsync();
+
+            return instruments.OrderBy(i => i).ToList();
         }
 
         public async Task<Trade> GetTradeByIdAsync(string tradeId, string userId)
@@ -637,6 +698,139 @@ namespace TradingNoteX.Services.Implementations
             var result = await _trades.UpdateOneAsync(filter, update);
 
             return result.ModifiedCount > 0;
+        }
+
+        public async Task<List<object>> GetInstrumentsAsync(string userId, string accountId = null)
+        {
+            var filterBuilder = Builders<Trade>.Filter;
+            var filters = new List<FilterDefinition<Trade>>
+            {
+                filterBuilder.Eq(t => t.OwnerId, userId)
+            };
+
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                filters.Add(filterBuilder.Eq(t => t.AccountId, accountId));
+            }
+
+            var filter = filterBuilder.And(filters);
+
+            // Use aggregation to get unique instruments with count
+            var pipeline = new[]
+            {
+                new MongoDB.Bson.BsonDocument("$match", filter.ToBsonDocument()),
+                new MongoDB.Bson.BsonDocument("$group", new MongoDB.Bson.BsonDocument
+                {
+                    { "_id", "$instrument" },
+                    { "count", new MongoDB.Bson.BsonDocument("$sum", 1) }
+                }),
+                new MongoDB.Bson.BsonDocument("$sort", new MongoDB.Bson.BsonDocument("_id", 1))
+            };
+
+            var aggregation = await _trades.AggregateAsync<MongoDB.Bson.BsonDocument>(pipeline);
+            var results = await aggregation.ToListAsync();
+
+            return results.Select(r => new
+            {
+                name = r["_id"].AsString,
+                count = r["count"].AsInt32
+            }).Cast<object>().ToList();
+        }
+
+        public async Task<object> GetStatsByAccountAsync(string userId)
+        {
+            // Get all accounts for the user
+            var accounts = await _accountService.GetAccountsDictionaryAsync(userId);
+
+            // Get statistics by account
+            var statsByAccount = new List<object>();
+
+            foreach (var account in accounts.Values)
+            {
+                var filter = Builders<Trade>.Filter.And(
+                    Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
+                    Builders<Trade>.Filter.Eq(t => t.AccountId, account.ObjectId)
+                );
+
+                var trades = await _trades.Find(filter).ToListAsync();
+
+                if (trades.Any())
+                {
+                    var totalPL = trades.Sum(t => t.RealizedPLEUR);
+                    var wins = trades.Count(t => t.RealizedPLEUR > 0);
+                    var winRate = (decimal)wins / trades.Count * 100;
+
+                    statsByAccount.Add(new
+                    {
+                        accountId = account.ObjectId,
+                        accountName = account.Name,
+                        broker = account.Broker,
+                        currency = account.Currency,
+                        totalTrades = trades.Count,
+                        totalPL = System.Math.Round(totalPL, 2),
+                        winRate = System.Math.Round(winRate, 2),
+                        avgTrade = System.Math.Round(totalPL / trades.Count, 2),
+                        lastTradeDate = trades.Max(t => t.ExecutedAtUTC)
+                    });
+                }
+                else
+                {
+                    statsByAccount.Add(new
+                    {
+                        accountId = account.ObjectId,
+                        accountName = account.Name,
+                        broker = account.Broker,
+                        currency = account.Currency,
+                        totalTrades = 0,
+                        totalPL = 0m,
+                        winRate = 0m,
+                        avgTrade = 0m,
+                        lastTradeDate = (System.DateTime?)null
+                    });
+                }
+            }
+
+            // Add statistics for trades without account
+            var noAccountFilter = Builders<Trade>.Filter.And(
+                Builders<Trade>.Filter.Eq(t => t.OwnerId, userId),
+                Builders<Trade>.Filter.Or(
+                    Builders<Trade>.Filter.Eq(t => t.AccountId, null),
+                    Builders<Trade>.Filter.Eq(t => t.AccountId, "")
+                )
+            );
+
+            var noAccountTrades = await _trades.Find(noAccountFilter).ToListAsync();
+
+            if (noAccountTrades.Any())
+            {
+                var totalPL = noAccountTrades.Sum(t => t.RealizedPLEUR);
+                var wins = noAccountTrades.Count(t => t.RealizedPLEUR > 0);
+                var winRate = (decimal)wins / noAccountTrades.Count * 100;
+
+                statsByAccount.Add(new
+                {
+                    accountId = (string)null,
+                    accountName = "Sem Conta",
+                    broker = "—",
+                    currency = "EUR",
+                    totalTrades = noAccountTrades.Count,
+                    totalPL = System.Math.Round(totalPL, 2),
+                    winRate = System.Math.Round(winRate, 2),
+                    avgTrade = System.Math.Round(totalPL / noAccountTrades.Count, 2),
+                    lastTradeDate = noAccountTrades.Max(t => t.ExecutedAtUTC)
+                });
+            }
+
+            return new
+            {
+                accounts = statsByAccount,
+                summary = new
+                {
+                    totalAccounts = accounts.Count,
+                    totalTrades = statsByAccount.Sum(s => (int)s.GetType().GetProperty("totalTrades").GetValue(s)),
+                    totalPL = statsByAccount.Sum(s => (decimal)s.GetType().GetProperty("totalPL").GetValue(s))
+                }
+            };
         }
     }
 }

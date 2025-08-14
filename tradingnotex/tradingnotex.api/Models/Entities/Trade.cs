@@ -50,10 +50,12 @@ namespace TradingNoteX.Models.Entities
         [BsonElement("ownerId")]
         public string OwnerId { get; set; }
 
+        // NOVO CAMPO: Associação com conta
+        [BsonElement("accountId")]
+        public string AccountId { get; set; }
+
         [BsonElement("acl")]
         public Dictionary<string, ACLPermission> ACL { get; set; }
-
-        // === NOVOS CAMPOS ===
 
         // Preços e custos
         [BsonElement("openPrice")]
