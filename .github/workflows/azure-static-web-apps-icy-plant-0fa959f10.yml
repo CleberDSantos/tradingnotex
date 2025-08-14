@@ -29,7 +29,7 @@ jobs:
           action: "upload"
           app_location: "./tradingnotex.webapp"
           api_location: ""
-          output_location: "dist/tradingnotex"
+          output_location: "dist/tradingnotex/browser"
         env:
           # ✅ Forçar versão do Node.js no Oryx:
           ORYX_NODE_VERSION: "20.19.1"
