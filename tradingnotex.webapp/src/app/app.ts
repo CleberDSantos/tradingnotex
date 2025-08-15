@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { Navigation } from './navigation/navigation';
 import { AuthStateService } from './services/auth-state.service';
 import { NgIf } from '@angular/common';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,7 @@ import { NgIf } from '@angular/common';
 })
 export class App implements OnInit {
   protected readonly title = 'TradingNoteX';
+  showShellNav = true;
 
   // rotas públicas que NUNCA devem redirecionar para login
   private readonly PUBLIC_PREFIXES = [
@@ -24,31 +26,28 @@ export class App implements OnInit {
     // adicione aqui outras públicas se tiver (ex.: /not-found, /status, etc.)
   ];
 
-  constructor(
-    private authStateService: AuthStateService,
-    private router: Router
-  ) {
-    // 🔒 NÃO faça redirect automático para /login aqui.
-    // Apenas, se quiser, reaja à perda de sessão em rotas protegidas.
-    this.authStateService.isAuthenticated$.subscribe(isAuth => {
-      const path = (this.router.url || '/').split('?')[0];
+  private readonly hideOn = new Set<string>([
+    '/', '/home', '/login', '/register'
+  ]);
 
-      // Se estiver numa rota pública, NUNCA redirecione.
-      const isPublic = this.PUBLIC_PREFIXES.some(prefix =>
-        path === prefix || path.startsWith(prefix)
-      );
+    constructor(private router: Router) {
+    // Atualiza ao navegar
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe((e) => {
+        const path = e.urlAfterRedirects.split('?')[0];
+        this.showShellNav = !this.hideOn.has(path);
+      });
 
-      if (!isAuth && !isPublic) {
-        // em rotas protegidas, deixe o guard decidir; ou redirecione aqui:
-        this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
-      }
-    });
+    // Estado inicial (reload direto numa rota)
+    const path = this.router.url.split('?')[0];
+    this.showShellNav = !this.hideOn.has(path);
   }
 
   ngOnInit() {
   }
 
-  isAuthenticated(): boolean {
-    return this.authStateService.isAuthenticated();
-  }
+  // isAuthenticated(): boolean {
+  //   return this.authStateService.isAuthenticated();
+  // }
 }

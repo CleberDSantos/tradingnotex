@@ -1,5 +1,5 @@
 <div class="min-h-screen bg-gradient-to-br from-blacker to-card">
-  <app-navigation *ngIf="isAuthenticated()"></app-navigation>
+ <app-navigation *ngIf="showShellNav"></app-navigation>
   <main class="container mx-auto px-4">
     <router-outlet></router-outlet>
   </main>
