@@ -81,6 +81,11 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
   canViewMonetaryValues = true;
   shareToken: string | null = null;
 
+  showShareModal = false;
+  mentorEmail = '';
+  shareSuccess = false;
+  shareUrl = '';
+
 
   // Abas
   activeTab = 'tab-entrada';

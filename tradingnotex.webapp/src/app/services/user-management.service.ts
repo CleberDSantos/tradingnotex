@@ -36,7 +36,8 @@ export class UserManagementService {
 
   register(request: RegisterRequest): Observable<User> {
     // Validações adicionais
-    if (request.userType === UserType.MENTOR || request.userType === UserType.OWNER) {
+    const userTypeStr = request.userType as string;
+    if (userTypeStr === UserType.MENTOR || userTypeStr === UserType.OWNER) {
       throw new Error('Tipo de usuário inválido para registro público');
     }
 

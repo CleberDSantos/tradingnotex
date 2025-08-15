@@ -204,6 +204,50 @@ input, select, textarea {
   }
 }
 
+/* Dark theme specific adjustments */
+.dark {
+  color-scheme: dark;
+}
+
+/* Purple color definition */
+.text-purple {
+  color: #8b5cf6;
+}
+
+.bg-purple {
+  background-color: #8b5cf6;
+}
+
+.border-purple {
+  border-color: #8b5cf6;
+}
+
+.from-purple {
+  --tw-gradient-from: #8b5cf6;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(139, 92, 246, 0));
+}
+
+.to-purple {
+  --tw-gradient-to: #8b5cf6;
+}
+
+.text-pink {
+  color: #ec4899;
+}
+
+.bg-pink {
+  background-color: #ec4899;
+}
+
+.from-pink {
+  --tw-gradient-from: #ec4899;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(236, 72, 153, 0));
+}
+
+.to-pink {
+  --tw-gradient-to: #ec4899;
+}
+
 .credits-indicator {
   position: fixed;
   bottom: 1rem;

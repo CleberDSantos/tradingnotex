@@ -1,5 +1,3 @@
-// app.routes.ts - Atualizado com controle de acesso por tipo de usuário
-
 import { Routes } from '@angular/router';
 import { Login } from './login/login';
 import { RegisterComponent } from './register/register.component';
