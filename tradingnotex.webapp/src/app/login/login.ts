@@ -20,7 +20,7 @@ export class Login {
     private router: Router
   ) {}
 
-  onLogin() {
+onLogin() {
     if (!this.loginData.username || !this.loginData.password) {
       this.error = 'Por favor, preencha todos os campos';
       return;
@@ -28,11 +28,31 @@ export class Login {
 
     this.error = null;
     this.loading = true;
-    
+
     this.authService.login(this.loginData).subscribe({
       next: (response) => {
         console.log('Login successful', response);
-        this.router.navigate(['/dashboard']);
+        this.loading = false;
+
+        // Verificar se há uma URL de retorno salva
+        const returnUrl = sessionStorage.getItem('returnUrl') || '/dashboard';
+        sessionStorage.removeItem('returnUrl');
+
+        // Pequeno delay para garantir que o estado foi atualizado
+        setTimeout(() => {
+          this.router.navigate([returnUrl]).then(success => {
+            if (success) {
+              console.log('Navigation successful to:', returnUrl);
+            } else {
+              console.log('Navigation failed, trying dashboard');
+              this.router.navigate(['/dashboard']);
+            }
+          }).catch(err => {
+            console.error('Navigation error:', err);
+            // Fallback para dashboard em caso de erro
+            this.router.navigate(['/dashboard']);
+          });
+        }, 100);
       },
       error: (error) => {
         console.error('Login failed', error);
