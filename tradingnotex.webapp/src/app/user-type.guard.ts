@@ -1,96 +1,81 @@
 // user-type.guard.ts
 import { inject } from '@angular/core';
-import { Router, CanActivateFn, ActivatedRouteSnapshot } from '@angular/router';
+import { Router, CanActivateFn, ActivatedRouteSnapshot, UrlTree } from '@angular/router';
 import { UserManagementService } from './services/user-management.service';
+import { AuthStateService } from './services/auth-state.service';
 import { UserType } from './models/user.model';
+import { catchError, map, of } from 'rxjs';
 
-
+// ✅ Guard por tipo de usuário (rodar depois do authGuard)
 export const userTypeGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const userManagementService = inject(UserManagementService);
   const router = inject(Router);
 
   const currentUser = userManagementService.getCurrentUser();
 
-  // Se não há usuário autenticado, deixar o authGuard lidar com isso
+  // Se não há usuário ainda (ex.: não hidratou), não bloqueie aqui.
   if (!currentUser) {
-    console.log('UserTypeGuard: No current user, letting authGuard handle it');
-    return true; // Deixar o authGuard redirecionar para login
-  }
-
-  // Obter tipos de usuário permitidos para esta rota
-  const allowedTypes = route.data['allowedUserTypes'] as UserType[];
-
-  // Se não há restrição específica, permitir acesso
-  if (!allowedTypes || allowedTypes.length === 0) {
+    // Deixe o authGuard (que está antes) decidir; aqui só não barra.
     return true;
   }
 
-  console.log('UserTypeGuard check:', {
-    route: route.routeConfig?.path,
-    userType: currentUser.userType,
-    allowedTypes: allowedTypes,
-    isAllowed: allowedTypes.includes(currentUser.userType)
-  });
+  const allowedTypes = route.data['allowedUserTypes'] as UserType[] | undefined;
+  if (!allowedTypes || allowedTypes.length === 0) return true;
 
-  // Verificar se o tipo do usuário atual está na lista de permitidos
-  if (allowedTypes.includes(currentUser.userType)) {
-    return true;
-  }
+  const isAllowed = allowedTypes.includes(currentUser.userType);
+  if (isAllowed) return true;
 
   // Redirecionar baseado no tipo de usuário
   switch (currentUser.userType) {
     case UserType.BASIC:
-      // Usuário Basic tentando acessar área Premium
       return router.parseUrl('/upgrade');
-
     case UserType.MENTOR:
-      // Mentor só pode ver trades compartilhados
-      return router.parseUrl('/shared-trades');
-
+      // ⚠️ Use uma rota existente — ajustei para dashboard
+      return router.parseUrl('/dashboard');
     default:
-      // Redirecionar para dashboard por padrão
       return router.parseUrl('/dashboard');
   }
 };
 
-// Guard específico para funcionalidades Premium
-export const premiumGuard: CanActivateFn = () => {
+// ✅ Guard específico para funcionalidades Premium
+export const premiumGuard: CanActivateFn = (route, state): boolean | UrlTree => {
+  const auth = inject(AuthStateService);
   const userManagementService = inject(UserManagementService);
   const router = inject(Router);
 
-  const currentUser = userManagementService.getCurrentUser();
-
-  if (!currentUser) {
-    return router.parseUrl('/login');
+  // 1) Sem token? Deixa o authGuard redirecionar
+  if (!auth.hasToken()) {
+    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
   }
 
-  // Permitir acesso para Premium e Owner
-  if (currentUser.userType === UserType.PREMIUM || currentUser.userType === UserType.OWNER) {
+  // 2) Com token mas ainda sem usuário carregado → não barre
+  const user = userManagementService.getCurrentUser();
+  if (!user) {
+    // Você pode permitir navegação e deixar um resolver carregar,
+    // ou então retornar para upgrade apenas quando souber de fato.
     return true;
   }
 
-  // Redirecionar Basic para página de upgrade
-  if (currentUser.userType === UserType.BASIC) {
+  if (user.userType === UserType.PREMIUM || user.userType === UserType.OWNER) return true;
+
+  if (user.userType === UserType.BASIC) {
     return router.parseUrl('/upgrade');
   }
 
-  // Mentores não têm acesso a funcionalidades premium
-  return router.parseUrl('/shared-trades');
+  // Mentor e outros sem acesso a premium
+  return router.parseUrl('/dashboard');
 };
 
-// Guard para funcionalidades com IA
+// ✅ Guard para funcionalidades com IA
 export const aiFeatureGuard: CanActivateFn = () => {
   const userManagementService = inject(UserManagementService);
   const router = inject(Router);
 
   const permissions = userManagementService.getCurrentPermissions();
-
   if (!permissions || !permissions.canUseAI) {
-    // Redirecionar para página de upgrade ou compra de créditos
     return router.parseUrl('/upgrade?feature=ai');
   }
 
-  // Verificar se tem créditos suficientes (para Premium)
   const credits = userManagementService.getAICredits();
   if (credits === 0) {
     return router.parseUrl('/buy-credits');
@@ -99,44 +84,35 @@ export const aiFeatureGuard: CanActivateFn = () => {
   return true;
 };
 
-// Guard para acesso de Mentor
-export const mentorAccessGuard: CanActivateFn = (route) => {
+// ✅ Guard para acesso de Mentor (assíncrono CORRETO)
+export const mentorAccessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const userManagementService = inject(UserManagementService);
   const router = inject(Router);
 
-  // Obter token de compartilhamento da URL
   const shareToken = route.queryParams['token'];
-
   if (!shareToken) {
     return router.parseUrl('/login');
   }
 
-  // Validar token
-  userManagementService.validateShareToken(shareToken).subscribe({
-    next: (shareLink) => {
-      if (shareLink.isActive && new Date(shareLink.expiresAt) > new Date()) {
-        return true;
-      }
-      return router.parseUrl('/link-expired');
-    },
-    error: () => {
-      return router.parseUrl('/invalid-link');
-    }
-  });
-
-  return true;
+  // Retorne o Observable transformado em boolean | UrlTree
+  return userManagementService.validateShareToken(shareToken).pipe(
+    map((shareLink) => {
+      const active = !!shareLink?.isActive;
+      const notExpired = shareLink?.expiresAt ? new Date(shareLink.expiresAt) > new Date() : false;
+      return (active && notExpired) ? true : router.parseUrl('/link-expired');
+    }),
+    catchError(() => of(router.parseUrl('/invalid-link')))
+  );
 };
 
-// Guard para área administrativa
+// ✅ Guard para área administrativa
 export const adminGuard: CanActivateFn = () => {
   const userManagementService = inject(UserManagementService);
   const router = inject(Router);
 
   const currentUser = userManagementService.getCurrentUser();
-
   if (!currentUser || currentUser.userType !== UserType.OWNER) {
     return router.parseUrl('/dashboard');
   }
-
   return true;
 };

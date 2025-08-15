@@ -1,27 +1,17 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthStateService } from './services/auth-state.service';
+import { environment } from '../environments/environment';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const authStateService = inject(AuthStateService);
-  const token = authStateService.getToken();
+  const auth = inject(AuthStateService);
+  const token = auth.getToken();
+  const apiBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
 
-  if (req.url.includes('/Auth/login') || req.url.includes('/Auth/register')) {
-    return next(req);
-  }
+  const isApi = apiBase && req.url.startsWith(apiBase);
+  const isAuthEndpoint = req.url.includes('/Auth/login') || req.url.includes('/Auth/register');
 
-  if (token) {
-    const authReq = req.clone({
-      setHeaders: {
-        'X-Parse-Session-Token': token
-      }
-    });
-    
-    console.log('Token sendo enviado:', token);
-    console.log('URL da requisição:', req.url);
-    
-    return next(authReq);
-  }
+  if (!isApi || isAuthEndpoint || !token) return next(req);
 
-  return next(req);
+  return next(req.clone({ setHeaders: { 'X-Parse-Session-Token': token } }));
 };

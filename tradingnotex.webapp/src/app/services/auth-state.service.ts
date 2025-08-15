@@ -1,68 +1,69 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root'
-})
+const TOKEN_KEY = 'authToken';
+
+@Injectable({ providedIn: 'root' })
 export class AuthStateService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   constructor() {
-    // Verificar se o usuário está autenticado ao inicializar o serviço
-    const token = this.getStoredToken();
-    if (token) {
+    if (this.getStoredToken()) {
       this.isAuthenticatedSubject.next(true);
     }
   }
 
-  setAuthenticated(isAuthenticated: boolean, token?: string) {
-    this.isAuthenticatedSubject.next(isAuthenticated);
-
-    if (isAuthenticated && token) {
-      this.storeToken(token);
-    } else {
-      this.removeToken();
-    }
-  }
-
-  isAuthenticated(): boolean {
-    return this.isAuthenticatedSubject.value;
+  /** Mais robusto para guards síncronos */
+  hasToken(): boolean {
+    return !!this.getStoredToken();
   }
 
   getToken(): string | null {
     return this.getStoredToken();
   }
 
+  /** Use isto no login/logout */
+  setAuthenticated(isAuthenticated: boolean, token?: string) {
+    this.isAuthenticatedSubject.next(isAuthenticated);
+
+    if (isAuthenticated) {
+      if (token) this.storeToken(token); // mantém o token atual se não vier um novo
+      return;
+    }
+
+    // só remove quando setar explicitamente para false
+    this.removeToken();
+  }
+  isAuthenticated(): boolean {
+    return this.isAuthenticatedSubject.value;
+  }
+
+  // ----- storage helpers -----
   private storeToken(token: string): void {
     try {
-      localStorage.setItem('authToken', token);
-    } catch (error) {
-      console.warn('Could not store token in localStorage:', error);
-      // Fallback para sessionStorage se localStorage não estiver disponível
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch {
       try {
-        sessionStorage.setItem('authToken', token);
-      } catch (sessionError) {
-        console.warn('Could not store token in sessionStorage:', sessionError);
-      }
+        sessionStorage.setItem(TOKEN_KEY, token);
+      } catch {}
     }
   }
 
   private getStoredToken(): string | null {
     try {
-      return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    } catch (error) {
-      console.warn('Could not retrieve token from storage:', error);
+      return (
+        localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+      );
+    } catch {
       return null;
     }
   }
 
   private removeToken(): void {
     try {
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
-    } catch (error) {
-      console.warn('Could not remove token from storage:', error);
-    }
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+    } catch {}
   }
 }
