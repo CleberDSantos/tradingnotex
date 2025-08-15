@@ -16,7 +16,17 @@ export class App implements OnInit {
   constructor(
     private authStateService: AuthStateService,
     private router: Router
-  ) {}
+  ) {
+
+this.authStateService.isAuthenticated$.subscribe(isAuth => {
+    console.log('Auth state changed:', isAuth);
+    if (!isAuth && this.router.url !== '/login' && this.router.url !== '/register') {
+      console.log('User became unauthenticated, redirecting to login');
+      this.router.navigate(['/login']);
+    }
+  });
+
+  }
 
   ngOnInit() {
     // Verificar se usuário está autenticado ao iniciar

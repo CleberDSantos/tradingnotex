@@ -11,9 +11,10 @@ export const userTypeGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
   const currentUser = userManagementService.getCurrentUser();
 
-  // Se não há usuário autenticado, redirecionar para login
+  // Se não há usuário autenticado, deixar o authGuard lidar com isso
   if (!currentUser) {
-    return router.parseUrl('/login');
+    console.log('UserTypeGuard: No current user, letting authGuard handle it');
+    return true; // Deixar o authGuard redirecionar para login
   }
 
   // Obter tipos de usuário permitidos para esta rota
@@ -23,6 +24,13 @@ export const userTypeGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   if (!allowedTypes || allowedTypes.length === 0) {
     return true;
   }
+
+  console.log('UserTypeGuard check:', {
+    route: route.routeConfig?.path,
+    userType: currentUser.userType,
+    allowedTypes: allowedTypes,
+    isAllowed: allowedTypes.includes(currentUser.userType)
+  });
 
   // Verificar se o tipo do usuário atual está na lista de permitidos
   if (allowedTypes.includes(currentUser.userType)) {

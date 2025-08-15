@@ -16,6 +16,7 @@ import { authGuard } from './auth-guard';
 import { userTypeGuard, premiumGuard, aiFeatureGuard, mentorAccessGuard, adminGuard } from './user-type.guard';
 import { UserType } from './models/user.model';
 import { UpgradeComponent } from './upgrade/upgrade.component';
+import { AuthDebugComponent } from './debug/auth-debug.component';
 
 export const routes: Routes = [
   // Rotas públicas
@@ -145,7 +146,12 @@ export const routes: Routes = [
         path: '',
         redirectTo: 'users',
         pathMatch: 'full'
-      }
+      },
+      {
+  path: 'debug-auth',
+  component: AuthDebugComponent,
+  canActivate: [] // Sem guards para debug
+}
     ]
   },
 
