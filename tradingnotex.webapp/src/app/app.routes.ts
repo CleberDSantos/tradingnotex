@@ -13,7 +13,7 @@ import { ProfileComponent } from './profile/profile.component';
 import { AccountsComponent } from './account/accounts';
 import { Logout } from './logout/logout';
 import { authGuard } from './auth-guard';
-import { userTypeGuard, premiumGuard, aiFeatureGuard, mentorAccessGuard, adminGuard } from './user-type.guard';
+import { userTypeGuard, premiumGuard, mentorAccessGuard, adminGuard } from './user-type.guard';
 import { UserType } from './models/user.model';
 import { UpgradeComponent } from './upgrade/upgrade.component';
 import { AuthDebugComponent } from './debug/auth-debug.component';
