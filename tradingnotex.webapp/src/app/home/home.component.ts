@@ -185,20 +185,6 @@ type BillingCycle = 'monthly' | 'yearly';
         </div>
       </section>
 
-      <!-- TRUST BAR -->
-      <section class="px-4 pb-6">
-        <div
-          class="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4 items-center opacity-80"
-        >
-          <div
-            *ngFor="let brand of brands"
-            class="text-center text-sm text-gray-400 border border-[#1b2330] rounded-lg py-3"
-          >
-            Compatível com {{ brand }}
-          </div>
-        </div>
-      </section>
-
       <!-- FEATURES -->
       <section id="features" class="py-20 px-4 bg-[#0f131a]/50">
         <div class="max-w-7xl mx-auto">
@@ -456,10 +442,13 @@ type BillingCycle = 'monthly' | 'yearly';
               </div>
               <ul class="space-y-3 mb-8 text-sm flex-1">
                 <li class="flex items-center">
-                  <span class="text-[#10b981] mr-3">✔</span> 100 trades/mês
+                  <span class="text-[#10b981] mr-3">✔</span> 100 trades
                 </li>
                 <li class="flex items-center">
                   <span class="text-[#10b981] mr-3">✔</span> Dashboard básico
+                </li>
+                 <li class="flex items-center mr-3">
+                  <span class="mr-3">✔</span> TraderQuest até nivel Plus
                 </li>
                 <li class="flex items-center">
                   <span class="text-[#10b981] mr-3">✔</span> 1 conta de trading
@@ -467,9 +456,13 @@ type BillingCycle = 'monthly' | 'yearly';
                 <li class="flex items-center text-gray-500">
                   <span class="mr-3">✖</span> Sem análise IA
                 </li>
-                <li class="flex items-center text-gray-500">
-                  <span class="mr-3">✖</span> Sem TraderQuest
+                 <li class="flex items-center text-gray-500">
+                  <span class="mr-3">✖</span> Sem Ferramenta de Parciais
                 </li>
+                 <li class="flex items-center text-gray-500">
+                  <span class="mr-3">✖</span> Sem Ferramenta de Gerenciamento de Risco
+                </li>
+
               </ul>
               <button
                 (click)="go('/register')"
@@ -517,6 +510,9 @@ type BillingCycle = 'monthly' | 'yearly';
                 <li class="flex items-center">
                   <span class="text-[#f59e0b] mr-3">★</span> TraderQuest
                   completo
+                </li>
+                 <li class="flex items-center">
+                  <span class="text-[#f59e0b] mr-3">★</span> Todas as Ferramentas
                 </li>
                 <li class="flex items-center">
                   <span class="text-[#f59e0b] mr-3">★</span> Compartilhar com
@@ -935,7 +931,6 @@ export class HomeComponent {
     'Tudo do Premium',
     '50 créditos IA/mês',
     'Contas ilimitadas',
-    'API access',
     'Suporte prioritário',
   ];
 
@@ -994,7 +989,7 @@ export class HomeComponent {
     },
     {
       q: 'Vocês oferecem suporte?',
-      a: 'Sim! Usuários Basic têm suporte por email. Premium e Pro têm suporte prioritário via chat ao vivo e resposta em até 2 horas.',
+      a: 'Sim! Usuários Basic têm suporte por email. Premium e Pro têm suporte prioritário via chat ao vivo e resposta em até 20 horas em dias úteis.',
     },
   ];
 
