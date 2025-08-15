@@ -1,10 +1,19 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TradeService } from '../services/trade.service';
 import { FormsModule } from '@angular/forms';
 import { NgIf, NgFor, DatePipe, CommonModule } from '@angular/common';
 import { lastValueFrom, Subject, takeUntil } from 'rxjs';
 import { Trade, Comment } from '../services/trade.service';
+import { UserManagementService } from '../services/user-management.service';
+import { UserType } from '../models/user.model';
 
 // Declarar bibliotecas externas
 declare var Chart: any;
@@ -26,10 +35,11 @@ interface ChartData {
   standalone: true,
   imports: [FormsModule, NgIf, NgFor, DatePipe, CommonModule],
   templateUrl: './trade-detail.html',
-  styleUrls: ['./trade-detail.scss']
+  styleUrls: ['./trade-detail.scss'],
 })
 export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('commentTextarea') commentTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('commentTextarea')
+  commentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileDropZone') fileDropZone!: ElementRef<HTMLDivElement>;
   @ViewChild('avChart') avChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -67,20 +77,37 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
   chartLoading = false;
   chartError = '';
 
+  isMentorView = false;
+  canViewMonetaryValues = true;
+  shareToken: string | null = null;
+
+
   // Abas
   activeTab = 'tab-entrada';
 
   // Alpha Vantage API Key (deve vir do environment)
   alphaVantageKey = 'MBQUDT2LF5EQF1WQ';
 
-  @ViewChild('commentsContainer') commentsContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('commentsContainer')
+  commentsContainer!: ElementRef<HTMLDivElement>;
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private tradeService: TradeService
+    private tradeService: TradeService,
+    private userManagementService: UserManagementService
   ) {}
 
   ngOnInit() {
+    // Verificar tipo de usuário e permissões
+    this.checkUserPermissions();
+
+    // Verificar se é acesso via link compartilhado
+    this.shareToken = this.route.snapshot.queryParamMap.get('token');
+    if (this.shareToken) {
+      this.validateShareAccess();
+    }
+
+    // Continuar com o carregamento normal
     const tradeId = this.route.snapshot.paramMap.get('id');
     if (tradeId) {
       this.loadTradeDetails(tradeId);
@@ -93,7 +120,7 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => this.scrollCommentsToBottom(), 0);
   }
 
-   private scrollCommentsToBottom() {
+  private scrollCommentsToBottom() {
     const el = this.commentsContainer?.nativeElement;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -106,27 +133,24 @@ export class TradeDetail implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // Converte qualquer valor de createdAt para epoch
+  private toEpoch(d?: string): number {
+    if (!d) return 0;
+    const t = new Date(d).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
 
-// Converte qualquer valor de createdAt para epoch
-private toEpoch(d?: string): number {
-  if (!d) return 0;
-  const t = new Date(d).getTime();
-  return Number.isFinite(t) ? t : 0;
-}
+  // Getter: mais antigos em cima, mais recentes embaixo
+  get sortedComments(): Comment[] {
+    return [...(this.comments || [])].sort(
+      (a, b) => this.toEpoch(a.createdAt) - this.toEpoch(b.createdAt)
+    );
+  }
 
-// Getter: mais antigos em cima, mais recentes embaixo
-get sortedComments(): Comment[] {
-  return [...(this.comments || [])].sort(
-    (a, b) => this.toEpoch(a.createdAt) - this.toEpoch(b.createdAt)
-  );
-}
-
-// Para o *ngFor não re-renderizar tudo à toa
-trackByCommentId(_i: number, c: Comment) {
-  return c.id || this.toEpoch(c.createdAt);
-}
-
-
+  // Para o *ngFor não re-renderizar tudo à toa
+  trackByCommentId(_i: number, c: Comment) {
+    return c.id || this.toEpoch(c.createdAt);
+  }
 
   ngOnDestroy() {
     this.destroy$.next();
@@ -169,8 +193,10 @@ trackByCommentId(_i: number, c: Comment) {
 
   private isCommentAreaFocused(): boolean {
     const activeElement = document.activeElement;
-    return activeElement === this.commentTextarea?.nativeElement ||
-           activeElement?.closest('.comment-input-area') !== null;
+    return (
+      activeElement === this.commentTextarea?.nativeElement ||
+      activeElement?.closest('.comment-input-area') !== null
+    );
   }
 
   private async handlePaste(e: ClipboardEvent) {
@@ -208,7 +234,7 @@ trackByCommentId(_i: number, c: Comment) {
       const pastedFile: PastedFile = {
         file,
         preview,
-        type: file.type.startsWith('image/') ? 'image' : 'file'
+        type: file.type.startsWith('image/') ? 'image' : 'file',
       };
 
       this.pastedFiles.push(pastedFile);
@@ -216,7 +242,6 @@ trackByCommentId(_i: number, c: Comment) {
       setTimeout(() => {
         this.commentTextarea?.nativeElement.focus();
       }, 100);
-
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       this.error = 'Erro ao processar arquivo';
@@ -237,7 +262,10 @@ trackByCommentId(_i: number, c: Comment) {
   }
 
   async postComment() {
-    if (!this.trade || (!this.newCommentText.trim() && this.pastedFiles.length === 0)) {
+    if (
+      !this.trade ||
+      (!this.newCommentText.trim() && this.pastedFiles.length === 0)
+    ) {
       return;
     }
 
@@ -250,27 +278,26 @@ trackByCommentId(_i: number, c: Comment) {
           data: pastedFile.preview,
           filename: pastedFile.file.name,
           size: pastedFile.file.size,
-          mimeType: pastedFile.file.type
+          mimeType: pastedFile.file.type,
         }))
       );
 
-     const newComment = await lastValueFrom(
-  this.tradeService.addComment(this.trade!.objectId!, {
-    text: this.newCommentText,
-    attachments
-  })
-);
+      const newComment = await lastValueFrom(
+        this.tradeService.addComment(this.trade!.objectId!, {
+          text: this.newCommentText,
+          attachments,
+        })
+      );
 
-// caso a API não retorne, define agora
-if (!newComment.createdAt) {
-  newComment.createdAt = new Date().toISOString();
-}
+      // caso a API não retorne, define agora
+      if (!newComment.createdAt) {
+        newComment.createdAt = new Date().toISOString();
+      }
 
-this.comments.push(newComment);        // entra no fim
-this.newCommentText = '';
-this.pastedFiles = [];
-setTimeout(() => this.scrollCommentsToBottom(), 0);
-
+      this.comments.push(newComment); // entra no fim
+      this.newCommentText = '';
+      this.pastedFiles = [];
+      setTimeout(() => this.scrollCommentsToBottom(), 0);
     } catch (error) {
       console.error('Erro ao adicionar comentário:', error);
       this.error = 'Erro ao adicionar comentário';
@@ -312,7 +339,8 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
 
   loadTradeDetails(tradeId: string) {
     this.loading = true;
-    this.tradeService.get(tradeId)
+    this.tradeService
+      .get(tradeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (trade) => {
@@ -325,7 +353,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
         error: (error) => {
           this.error = 'Erro ao carregar detalhes do trade';
           this.loading = false;
-        }
+        },
       });
   }
 
@@ -358,7 +386,8 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
   }
 
   loadComments(tradeId: string) {
-    this.tradeService.listComments(tradeId)
+    this.tradeService
+      .listComments(tradeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (comments) => {
@@ -366,7 +395,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
         },
         error: (error) => {
           console.error('Erro ao carregar comentários', error);
-        }
+        },
       });
   }
 
@@ -381,7 +410,9 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
     this.chartError = '';
 
     const symbol = this.trade.instrument || 'AAPL';
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=15min&outputsize=full&apikey=${this.alphaVantageKey}`;
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(
+      symbol
+    )}&interval=15min&outputsize=full&apikey=${this.alphaVantageKey}`;
 
     try {
       const response = await fetch(url);
@@ -389,7 +420,10 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
       const timeSeriesKey = 'Time Series (15min)';
 
       if (!data[timeSeriesKey]) {
-        this.chartError = data['Note'] || data['Error Message'] || 'Sem dados para o símbolo/intervalo.';
+        this.chartError =
+          data['Note'] ||
+          data['Error Message'] ||
+          'Sem dados para o símbolo/intervalo.';
         this.renderChart([], []);
         return;
       }
@@ -397,7 +431,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
       const rows = Object.entries(data[timeSeriesKey])
         .map(([time, values]: [string, any]) => ({
           time: new Date(time),
-          close: parseFloat(values['4. close'])
+          close: parseFloat(values['4. close']),
         }))
         .sort((a, b) => a.time.getTime() - b.time.getTime());
 
@@ -405,10 +439,10 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
       const start = new Date(execTime.getTime() - 24 * 60 * 60 * 1000);
       const end = new Date(execTime.getTime() + 24 * 60 * 60 * 1000);
 
-      const filteredRows = rows.filter(r => r.time >= start && r.time <= end);
+      const filteredRows = rows.filter((r) => r.time >= start && r.time <= end);
 
-      const labels = filteredRows.map(r => this.formatDateTime(r.time));
-      const prices = filteredRows.map(r => r.close);
+      const labels = filteredRows.map((r) => this.formatDateTime(r.time));
+      const prices = filteredRows.map((r) => r.close);
 
       this.renderChart(labels, prices);
     } catch (error) {
@@ -451,7 +485,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
       borderColor: color,
       backgroundColor: 'transparent',
       pointRadius: 0,
-      fill: false
+      fill: false,
     });
 
     this.stockChart = new Chart(ctx, {
@@ -467,24 +501,24 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
             backgroundColor: 'rgba(34, 211, 238, 0.1)',
             tension: 0.25,
             pointRadius: 0,
-            fill: true
+            fill: true,
           },
           makeHLine(stop, 'Stop Loss', '#ef4444'),
           makeHLine(exec, 'Execução', '#f59e0b'),
-          makeHLine(target, 'Alvo', '#10b981')
-        ]
+          makeHLine(target, 'Alvo', '#10b981'),
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { color: '#9ca3af' }
+            labels: { color: '#9ca3af' },
           },
           tooltip: {
             mode: 'index',
-            intersect: false
-          }
+            intersect: false,
+          },
         },
         scales: {
           x: {
@@ -492,16 +526,16 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
               color: '#9ca3af',
               maxRotation: 0,
               autoSkip: true,
-              maxTicksLimit: 10
+              maxTicksLimit: 10,
             },
-            grid: { color: 'rgba(27,35,48,.3)' }
+            grid: { color: 'rgba(27,35,48,.3)' },
           },
           y: {
             ticks: { color: '#9ca3af' },
-            grid: { color: 'rgba(27,35,48,.3)' }
-          }
-        }
-      }
+            grid: { color: 'rgba(27,35,48,.3)' },
+          },
+        },
+      },
     });
   }
 
@@ -563,10 +597,11 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
       entryType: this.entryTypeValue,
       greed: this.greedToggle,
       youtubeLink: this.youtubeLink,
-      tradeStatus: this.trade.tradeStatus
+      tradeStatus: this.trade.tradeStatus,
     };
 
-    this.tradeService.updateDetails(this.trade.objectId!, updateRequest)
+    this.tradeService
+      .updateDetails(this.trade.objectId!, updateRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updated) => {
@@ -576,7 +611,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
         },
         error: (error) => {
           this.error = 'Erro ao salvar alterações';
-        }
+        },
       });
   }
 
@@ -593,16 +628,130 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
     }
   }
 
+  private checkUserPermissions() {
+    const currentUser = this.userManagementService.getCurrentUser();
+
+    if (currentUser) {
+      this.isMentorView = currentUser.userType === UserType.MENTOR;
+      this.canViewMonetaryValues =
+        this.userManagementService.canViewMonetaryValues();
+    }
+  }
+
+  private validateShareAccess() {
+    if (!this.shareToken) return;
+
+    this.userManagementService.validateShareToken(this.shareToken).subscribe({
+      next: (shareLink) => {
+        if (!shareLink.isActive || new Date(shareLink.expiresAt) < new Date()) {
+          this.error = 'Este link de compartilhamento expirou';
+          this.router.navigate(['/']);
+        }
+        // Forçar visualização de mentor para links compartilhados
+        this.isMentorView = true;
+        this.canViewMonetaryValues = false;
+      },
+      error: () => {
+        this.error = 'Link de compartilhamento inválido';
+        this.router.navigate(['/']);
+      },
+    });
+  }
+
+  // Método para formatar valores monetários com ocultação
+  formatMonetaryValue(value: number | null | undefined): string {
+    if (!this.canViewMonetaryValues) {
+      return '•••••';
+    }
+
+    if (value === null || value === undefined) return '—';
+
+    return new Intl.NumberFormat('pt-PT', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
+  }
+
+  // Método para formatar percentuais (sempre visível)
+  formatPercentage(value: number): string {
+    return `${value.toFixed(2)}%`;
+  }
+
+  // Método para ocultar campos sensíveis
+  shouldHideField(fieldType: 'monetary' | 'account' | 'personal'): boolean {
+    if (!this.isMentorView) return false;
+
+    switch (fieldType) {
+      case 'monetary':
+        return !this.canViewMonetaryValues;
+      case 'account':
+        return true; // Mentores não veem informações de conta
+      case 'personal':
+        return true; // Mentores não veem informações pessoais
+      default:
+        return false;
+    }
+  }
+
+  // Método para gerar link de compartilhamento
+  generateShareLink() {
+    if (!this.trade) return;
+
+    const currentUser = this.userManagementService.getCurrentUser();
+    if (!currentUser || currentUser.userType === UserType.BASIC) {
+      this.error = 'Apenas usuários Premium podem compartilhar trades';
+      return;
+    }
+
+    // Abrir modal para inserir e-mail do mentor
+    this.showShareModal = true;
+  }
+
+  shareWithMentor() {
+    if (!this.trade || !this.mentorEmail) return;
+
+    this.userManagementService
+      .createShareableLink(this.trade.objectId!, this.mentorEmail)
+      .subscribe({
+        next: (shareLink) => {
+          const fullUrl = `${window.location.origin}/trade/${
+            this.trade!.objectId
+          }?token=${shareLink.token}`;
+
+          // Copiar para clipboard
+          navigator.clipboard.writeText(fullUrl);
+
+          // Mostrar sucesso
+          this.shareSuccess = true;
+          this.shareUrl = fullUrl;
+
+          // Enviar e-mail se fornecido
+          if (this.mentorEmail) {
+            this.sendShareEmail(this.mentorEmail, fullUrl);
+          }
+        },
+        error: () => {
+          this.error = 'Erro ao gerar link de compartilhamento';
+        },
+      });
+  }
+
+  private sendShareEmail(email: string, url: string) {
+    // Implementar envio de e-mail via backend
+    console.log(`Enviando link para ${email}: ${url}`);
+  }
+
   requestAIAnalysis(commentId: string) {
     if (!this.trade) return;
 
     this.showAITyping = true;
 
-    this.tradeService.analyzeComment(this.trade.objectId!, commentId)
+    this.tradeService
+      .analyzeComment(this.trade.objectId!, commentId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (analyzedComment) => {
-          const index = this.comments.findIndex(c => c.id === commentId);
+          const index = this.comments.findIndex((c) => c.id === commentId);
           if (index !== -1) {
             this.comments[index] = analyzedComment;
           }
@@ -611,7 +760,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
         error: (error) => {
           this.error = 'Erro na análise AI';
           this.showAITyping = false;
-        }
+        },
       });
   }
 
@@ -637,7 +786,9 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
 
   getYouTubeVideoId(): string | null {
     if (!this.youtubeLink) return null;
-    const match = this.youtubeLink.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    const match = this.youtubeLink.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/
+    );
     return match ? match[1] : null;
   }
 
@@ -690,7 +841,7 @@ setTimeout(() => this.scrollCommentsToBottom(), 0);
     if (value === null || value === undefined) return '—';
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'EUR',
     }).format(value);
   }
 

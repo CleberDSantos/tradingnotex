@@ -240,7 +240,7 @@
         </td>
         <td class="p-2 text-right font-bold"
             [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'text-good' : 'text-bad'">
-          {{ trade.realizedPLEUR | number:'1.2-2' }}
+         {{ trade.realizedPLEUR | currency:'EUR' }}
         </td>
         <td class="p-2">{{ trade.setup || '—' }}</td>
         <td class="text-center p-2">

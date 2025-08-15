@@ -1,0 +1,261 @@
+<!-- register.component.html -->
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blacker to-card">
+  <div class="max-w-md w-full space-y-8">
+    <!-- Header -->
+    <div class="text-center">
+      <h2 class="text-3xl font-extrabold text-good">TradingNoteX</h2>
+      <p class="mt-2 text-sm text-gray-400">Crie sua conta e comece a organizar seus trades</p>
+    </div>
+
+    <!-- Planos -->
+    <div class="grid grid-cols-2 gap-4">
+      <!-- Plano Basic -->
+      <div
+        (click)="selectPlan('basic')"
+        class="card p-4 cursor-pointer transition-all hover:border-cyanx/50"
+        [ngClass]="selectedPlan === 'basic' ? 'border-cyanx ring-2 ring-cyanx/30' : ''">
+        <div class="text-center">
+          <div class="text-2xl mb-2">📊</div>
+          <h3 class="font-bold text-lg">Basic</h3>
+          <p class="text-2xl font-bold text-good mt-2">Grátis</p>
+          <ul class="text-xs text-gray-400 mt-3 space-y-1 text-left">
+            <li>✅ Dashboard completo</li>
+            <li>✅ Importar até 100 trades/mês</li>
+            <li>✅ 1 conta de trading</li>
+            <li>✅ Análise básica</li>
+            <li>❌ Sem acesso à IA</li>
+            <li>❌ Sem TraderQuest</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Plano Premium -->
+      <div
+        (click)="selectPlan('premium')"
+        class="card p-4 cursor-pointer transition-all hover:border-accent/50 relative"
+        [ngClass]="selectedPlan === 'premium' ? 'border-accent ring-2 ring-accent/30' : ''">
+        <span class="absolute -top-2 -right-2 bg-gradient-to-r from-accent to-yellow-400 text-black text-xs px-2 py-1 rounded-full font-bold">
+          Popular
+        </span>
+        <div class="text-center">
+          <div class="text-2xl mb-2">🚀</div>
+          <h3 class="font-bold text-lg">Premium</h3>
+          <p class="text-2xl font-bold text-accent mt-2">€9.99/mês</p>
+          <ul class="text-xs text-gray-400 mt-3 space-y-1 text-left">
+            <li>✅ Tudo do Basic</li>
+            <li>✅ <span class="text-cyanx">IA com 10 créditos/mês</span></li>
+            <li>✅ Trades ilimitados</li>
+            <li>✅ Até 5 contas</li>
+            <li>✅ TraderQuest</li>
+            <li>✅ Compartilhar com mentor</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulário de Registro -->
+    <form (ngSubmit)="onRegister()" #registerForm="ngForm" class="card p-8 space-y-6">
+      <div *ngIf="error" class="mb-4 bg-bad/20 border border-bad/50 text-bad px-4 py-3 rounded">
+        {{ error }}
+      </div>
+
+      <div *ngIf="success" class="mb-4 bg-good/20 border border-good/50 text-good px-4 py-3 rounded">
+        {{ success }}
+      </div>
+
+      <!-- Dados Básicos -->
+      <div class="space-y-4">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-300">
+            Nome de Usuário *
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            [(ngModel)]="registerData.username"
+            required
+            minlength="3"
+            #username="ngModel"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="trader_pro">
+          <div *ngIf="username.invalid && username.touched" class="mt-1 text-bad text-sm">
+            Nome de usuário deve ter pelo menos 3 caracteres
+          </div>
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300">
+            E-mail *
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            [(ngModel)]="registerData.email"
+            required
+            email
+            #email="ngModel"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="seu@email.com">
+          <div *ngIf="email.invalid && email.touched" class="mt-1 text-bad text-sm">
+            E-mail inválido
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300">
+            Senha *
+          </label>
+          <div class="relative">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              id="password"
+              name="password"
+              [(ngModel)]="registerData.password"
+              required
+              minlength="6"
+              #password="ngModel"
+              class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+              placeholder="Mínimo 6 caracteres">
+            <button
+              type="button"
+              (click)="togglePassword()"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+            </button>
+          </div>
+          <div *ngIf="password.invalid && password.touched" class="mt-1 text-bad text-sm">
+            Senha deve ter pelo menos 6 caracteres
+          </div>
+        </div>
+
+        <div>
+          <label for="fullName" class="block text-sm font-medium text-gray-300">
+            Nome Completo
+          </label>
+          <input
+            type="text"
+            id="fullName"
+            name="fullName"
+            [(ngModel)]="registerData.fullName"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="João Silva">
+        </div>
+      </div>
+
+      <!-- Dados Adicionais para Premium -->
+      <div *ngIf="selectedPlan === 'premium'" class="space-y-4 pt-4 border-t border-edge">
+        <h3 class="text-sm font-semibold text-gray-300">Informações Adicionais (Premium)</h3>
+
+        <div>
+          <label for="company" class="block text-sm font-medium text-gray-300">
+            Empresa/Prop Firm
+          </label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            [(ngModel)]="registerData.company"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="Ex: FTMO, MFF">
+        </div>
+
+        <div>
+          <label for="experience" class="block text-sm font-medium text-gray-300">
+            Experiência em Trading
+          </label>
+          <select
+            id="experience"
+            name="experience"
+            [(ngModel)]="registerData.tradingExperience"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx">
+            <option value="">Selecione...</option>
+            <option value="beginner">Iniciante (< 1 ano)</option>
+            <option value="intermediate">Intermediário (1-3 anos)</option>
+            <option value="advanced">Avançado (3-5 anos)</option>
+            <option value="expert">Expert (> 5 anos)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="phone" class="block text-sm font-medium text-gray-300">
+            Telefone
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            [(ngModel)]="registerData.phone"
+            class="mt-1 block w-full px-3 py-2 bg-blacker border border-edge rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyanx focus:border-cyanx"
+            placeholder="+351 900 000 000">
+        </div>
+      </div>
+
+      <!-- Termos e Condições -->
+      <div class="flex items-center">
+        <input
+          type="checkbox"
+          id="terms"
+          name="terms"
+          [(ngModel)]="registerData.acceptTerms"
+          required
+          #terms="ngModel"
+          class="h-4 w-4 text-cyanx focus:ring-cyanx border-gray-300 rounded">
+        <label for="terms" class="ml-2 block text-sm text-gray-400">
+          Li e aceito os
+          <a href="#" class="text-cyanx hover:text-cyan-300">Termos de Serviço</a> e a
+          <a href="#" class="text-cyanx hover:text-cyan-300">Política de Privacidade</a>
+        </label>
+      </div>
+      <div *ngIf="terms.invalid && terms.touched" class="mt-1 text-bad text-sm">
+        Você deve aceitar os termos para continuar
+      </div>
+
+      <!-- Botões -->
+      <div class="space-y-3">
+        <button
+          type="submit"
+          [disabled]="!registerForm.form.valid || loading"
+          class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-all"
+          [ngClass]="selectedPlan === 'premium'
+            ? 'bg-gradient-to-r from-accent to-yellow-400 hover:from-yellow-400 hover:to-accent'
+            : 'bg-good hover:bg-good/80'"
+          [class.disabled:opacity-50]="!registerForm.form.valid || loading"
+          [class.disabled:cursor-not-allowed]="!registerForm.form.valid || loading">
+
+          <span *ngIf="loading" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Criando conta...
+          </span>
+          <span *ngIf="!loading">
+            {{ selectedPlan === 'premium' ? '🚀 Criar Conta Premium' : '📊 Criar Conta Basic' }}
+          </span>
+        </button>
+
+        <div class="text-center">
+          <p class="text-sm text-gray-400">
+            Já tem uma conta?
+            <a routerLink="/login" class="text-cyanx hover:text-cyan-300 font-medium">
+              Fazer login
+            </a>
+          </p>
+        </div>
+      </div>
+    </form>
+
+    <!-- Informações Adicionais -->
+    <div class="text-center text-xs text-gray-500">
+      <p *ngIf="selectedPlan === 'premium'" class="mb-2">
+        💳 Pagamento seguro via Stripe. Cancele quando quiser.
+      </p>
+      <p>
+        Precisa de ajuda?
+        <a href="#" class="text-cyanx hover:text-cyan-300">Fale conosco</a>
+      </p>
+    </div>
+  </div>
+</div>

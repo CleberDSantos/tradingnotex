@@ -52,7 +52,7 @@
           <div class="text-xs text-gray-400 mb-1">P/L (€)</div>
           <div class="text-3xl font-bold"
                [ngClass]="(trade.realizedPLEUR || 0) >= 0 ? 'text-good' : 'text-bad'">
-            {{ (trade.realizedPLEUR || 0) >= 0 ? '+' : '' }}{{ formatCurrency(trade.realizedPLEUR) }}
+            {{ (trade.realizedPLEUR || 0) >= 0 ? '+' : '' }}{{ formatMonetaryValue(trade.realizedPLEUR) }}
           </div>
         </div>
         <div>

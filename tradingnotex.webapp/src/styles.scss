@@ -42,26 +42,26 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   &.btn-primary {
     background: #10b981;
     color: white;
-    
+
     &:hover:not(:disabled) {
       background: #059669;
     }
   }
-  
+
   &.btn-secondary {
     background: #1b2330;
     color: #9ca3af;
     border: 1px solid #1b2330;
-    
+
     &:hover:not(:disabled) {
       background: #2a3441;
       color: #e5e7eb;
@@ -77,13 +77,13 @@ input, select, textarea {
   padding: 0.5rem 0.75rem;
   color: #e5e7eb;
   transition: all 0.2s ease;
-  
+
   &:focus {
     outline: none;
     border-color: #22d3ee;
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
   }
-  
+
   &::placeholder {
     color: #6b7280;
   }
@@ -93,19 +93,19 @@ input, select, textarea {
 .table {
   width: 100%;
   border-collapse: collapse;
-  
+
   th, td {
     padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #1b2330;
   }
-  
+
   th {
     background: #1b2330;
     font-weight: 600;
     color: #9ca3af;
   }
-  
+
   tbody tr:hover {
     background: rgba(27, 35, 48, 0.5);
   }
@@ -117,7 +117,7 @@ input, select, textarea {
   justify-content: center;
   align-items: center;
   padding: 2rem;
-  
+
   .spinner {
     width: 2rem;
     height: 2rem;
@@ -138,14 +138,14 @@ input, select, textarea {
   .container {
     padding: 0.5rem;
   }
-  
+
   .card {
     margin: 0.5rem 0;
   }
-  
+
   .table {
     font-size: 0.875rem;
-    
+
     th, td {
       padding: 0.5rem;
     }
@@ -174,4 +174,49 @@ input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #2a3441;
+}
+
+// styles.scss
+.premium-badge {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #000;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  margin-left: 0.5rem;
+}
+
+.mentor-view-banner {
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  color: white;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.hidden-value {
+  filter: blur(5px);
+  user-select: none;
+
+  &:hover {
+    filter: blur(3px);
+  }
+}
+
+.credits-indicator {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+
+  .credits-count {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #22d3ee;
+  }
 }

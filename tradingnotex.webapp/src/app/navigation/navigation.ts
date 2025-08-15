@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStateService } from '../services/auth-state.service';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { AuthService } from '../services/auth.service';
+import { UserManagementService } from '../services/user-management.service';
 
 @Component({
   selector: 'app-navigation',
@@ -25,7 +26,8 @@ export class Navigation {
   constructor(
     public authStateService: AuthStateService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private userManagementService: UserManagementService
   ) {
     this.username = localStorage.getItem('username');
   }
@@ -78,4 +80,15 @@ export class Navigation {
       }
     });
   }
+
+  canAccessFeature(feature: string): boolean {
+  const permissions = this.userManagementService.getCurrentPermissions();
+
+  switch(feature) {
+    case 'ai': return permissions?.canUseAI || false;
+    case 'quest': return permissions?.canAccessTraderQuest || false;
+    case 'evolution': return permissions?.canAccessAdvancedAnalytics || false;
+    default: return true;
+  }
+}
 }

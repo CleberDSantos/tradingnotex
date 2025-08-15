@@ -1,0 +1,212 @@
+<!-- upgrade.component.html -->
+<div class="min-h-screen bg-gradient-to-br from-blacker to-card py-12 px-4">
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-accent to-yellow-400 bg-clip-text text-transparent">
+        Desbloqueie Todo o Potencial do TradingNoteX
+      </h1>
+      <p class="text-gray-400 mt-3 text-lg">
+        Faça upgrade para Premium e leve sua análise de trading para o próximo nível
+      </p>
+    </div>
+
+    <!-- Comparação de Planos -->
+    <div class="grid md:grid-cols-2 gap-8 mb-12">
+
+      <!-- Plano Atual (Basic) -->
+      <div class="card p-6 opacity-75">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-400">Basic</h2>
+            <p class="text-gray-500">Seu plano atual</p>
+          </div>
+          <span class="text-3xl font-bold text-gray-400">Grátis</span>
+        </div>
+
+        <ul class="space-y-3">
+          <li class="flex items-center text-gray-400">
+            <span class="text-good mr-2">✓</span>
+            Dashboard básico
+          </li>
+          <li class="flex items-center text-gray-400">
+            <span class="text-good mr-2">✓</span>
+            Importar até 100 trades/mês
+          </li>
+          <li class="flex items-center text-gray-400">
+            <span class="text-good mr-2">✓</span>
+            1 conta de trading
+          </li>
+          <li class="flex items-center text-gray-400">
+            <span class="text-good mr-2">✓</span>
+            Análise básica de risco
+          </li>
+          <li class="flex items-center text-gray-500">
+            <span class="text-gray-600 mr-2">✗</span>
+            <s>Análise com IA</s>
+          </li>
+          <li class="flex items-center text-gray-500">
+            <span class="text-gray-600 mr-2">✗</span>
+            <s>TraderQuest</s>
+          </li>
+          <li class="flex items-center text-gray-500">
+            <span class="text-gray-600 mr-2">✗</span>
+            <s>Compartilhar com mentor</s>
+          </li>
+          <li class="flex items-center text-gray-500">
+            <span class="text-gray-600 mr-2">✗</span>
+            <s>Exportar dados</s>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Plano Premium -->
+      <div class="card p-6 ring-2 ring-accent relative">
+        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <span class="bg-gradient-to-r from-accent to-yellow-400 text-black text-sm px-4 py-1 rounded-full font-bold">
+            RECOMENDADO
+          </span>
+        </div>
+
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white">Premium</h2>
+            <p class="text-cyanx">Desbloqueie tudo</p>
+          </div>
+          <div class="text-right">
+            <span class="text-3xl font-bold text-accent">€9.99</span>
+            <span class="text-gray-400">/mês</span>
+          </div>
+        </div>
+
+        <ul class="space-y-3">
+          <li class="flex items-center">
+            <span class="text-good mr-2">✓</span>
+            <span class="text-white">Tudo do plano Basic</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-cyanx font-semibold">Análise com IA (10 créditos/mês)</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">Trades ilimitados</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">Até 5 contas de trading</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">TraderQuest - Gamificação</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">Compartilhar trades com mentor</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">Exportar dados em múltiplos formatos</span>
+          </li>
+          <li class="flex items-center">
+            <span class="text-accent mr-2">★</span>
+            <span class="text-white">Suporte prioritário</span>
+          </li>
+        </ul>
+
+        <button
+          (click)="startUpgrade()"
+          class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-accent to-yellow-400 hover:from-yellow-400 hover:to-accent text-black font-bold rounded-lg transition-all transform hover:scale-105">
+          🚀 Fazer Upgrade Agora
+        </button>
+      </div>
+    </div>
+
+    <!-- Recursos Premium em Destaque -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-bold text-center mb-8">Recursos Exclusivos Premium</h2>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- IA Analysis -->
+        <div class="card p-6 text-center hover:border-cyanx/50 transition-all">
+          <div class="text-4xl mb-3">🤖</div>
+          <h3 class="font-bold text-lg mb-2">Análise com IA</h3>
+          <p class="text-gray-400 text-sm">
+            Receba insights inteligentes sobre seus trades, sugestões de melhorias e análise preditiva
+          </p>
+        </div>
+
+        <!-- TraderQuest -->
+        <div class="card p-6 text-center hover:border-accent/50 transition-all">
+          <div class="text-4xl mb-3">🎮</div>
+          <h3 class="font-bold text-lg mb-2">TraderQuest</h3>
+          <p class="text-gray-400 text-sm">
+            Gamifique sua jornada de trading com níveis, conquistas e desafios diários
+          </p>
+        </div>
+
+        <!-- Mentor Sharing -->
+        <div class="card p-6 text-center hover:border-good/50 transition-all">
+          <div class="text-4xl mb-3">👥</div>
+          <h3 class="font-bold text-lg mb-2">Compartilhar com Mentor</h3>
+          <p class="text-gray-400 text-sm">
+            Compartilhe trades com seu mentor sem expor valores monetários sensíveis
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-xl font-bold mb-4">Perguntas Frequentes</h2>
+
+      <div class="space-y-4">
+        <div>
+          <h3 class="font-semibold text-cyanx mb-2">Como funciona o sistema de créditos de IA?</h3>
+          <p class="text-gray-400 text-sm">
+            Usuários Premium recebem 10 créditos por mês. Cada análise básica consome 1 crédito,
+            análises avançadas consomem 3 créditos. Créditos extras podem ser comprados.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-cyanx mb-2">Posso cancelar a qualquer momento?</h3>
+          <p class="text-gray-400 text-sm">
+            Sim! Sem compromisso. Cancele quando quiser e mantenha o acesso até o fim do período pago.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-cyanx mb-2">O que acontece com meus dados se eu cancelar?</h3>
+          <p class="text-gray-400 text-sm">
+            Seus dados são mantidos por 30 dias após o cancelamento. Você pode fazer downgrade
+            para Basic e manter acesso limitado.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA Final -->
+    <div class="text-center">
+      <p class="text-gray-400 mb-4">
+        Junte-se a centenas de traders que já melhoraram seus resultados com o Premium
+      </p>
+      <button
+        (click)="startUpgrade()"
+        class="px-8 py-4 bg-gradient-to-r from-accent to-yellow-400 hover:from-yellow-400 hover:to-accent text-black font-bold rounded-lg transition-all transform hover:scale-105 text-lg">
+        🎯 Começar Teste Grátis de 7 Dias
+      </button>
+      <p class="text-xs text-gray-500 mt-3">
+        Não é necessário cartão de crédito para o período de teste
+      </p>
+    </div>
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-8">
+      <a routerLink="/dashboard" class="text-gray-400 hover:text-cyanx transition-colors">
+        ← Voltar ao Dashboard
+      </a>
+    </div>
+  </div>
+</div>
