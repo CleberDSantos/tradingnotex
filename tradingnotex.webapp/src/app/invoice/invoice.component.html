@@ -1,0 +1,11 @@
+<!-- invoice.component.html -->
+<table>
+  <tr *ngFor="let inv of invoices">
+    <td>{{ inv.amount_paid | currency:'EUR' }}</td>
+    <td>{{ inv.status }}</td>
+    <td>
+      <a [href]="inv.hosted_url" target="_blank">Ver online</a> |
+      <a [href]="inv.pdf_url" target="_blank">PDF</a>
+    </td>
+  </tr>
+</table>
