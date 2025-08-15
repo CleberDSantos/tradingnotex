@@ -84,14 +84,15 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.loadInitialData();
-      this.buildCalendar();
-       this.applyFilters();
+    this.buildCalendar();
   }
 
   ngAfterViewInit() {
     // Inicializar gráficos após a view estar pronta
     setTimeout(() => {
       this.initCharts();
+      // Inicializar com gráfico vazio mas visível
+      this.initEmptyIntradayChart();
     }, 500);
   }
 
@@ -107,7 +108,6 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-
   private loadInitialData() {
     // Carregar trades para popular o select de dias
     this.loadTrades();
@@ -116,46 +116,51 @@ export class RiskComponent implements OnInit, OnDestroy, AfterViewInit {
     this.evaluateRangeRisk();
   }
 
-private loadTrades() {
-  this.tradeService.list({ Limit: 1000, OrderBy: '-executedAtUTC' })
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (response) => {
-        this.trades = response.results || [];
-        this.buildUniqueDays(this.trades);
+  private loadTrades() {
+    this.tradeService.list({ Limit: 1000, OrderBy: '-executedAtUTC' })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.trades = response.results || [];
+          this.buildUniqueDays(this.trades);
 
-        if (this.trades.length) {
-          const sorted = [...this.trades].sort(
-            (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
-          );
-          this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
-          this.rangeRiskData.end   = sorted.at(-1)!.executedAtUTC.split('T')[0];
-        }
+          if (this.trades.length) {
+            const sorted = [...this.trades].sort(
+              (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
+            );
+            this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
+            this.rangeRiskData.end = sorted.at(-1)!.executedAtUTC.split('T')[0];
 
-        if (this.riskData.selectedDay) {
-          this.evaluateDayRisk();
-        }
-        this.evaluateRangeRisk();
-        this.buildCalendar();
-      },
-      error: (error) => console.error('Erro ao carregar trades:', error)
-    });
-}
+            // Se não há dia selecionado, selecionar o último dia com trades automaticamente
+            if (!this.riskData.selectedDay && this.uniqueDays.length > 0) {
+              // Pegar o dia mais recente
+              const mostRecentDay = this.uniqueDays[0].value;
+              this.riskData.selectedDay = mostRecentDay;
+              this.dayRiskData.day = mostRecentDay;
+              // Carregar dados intraday do dia mais recente
+              setTimeout(() => this.evaluateDayRisk(), 100);
+            }
+          }
 
+          this.evaluateRangeRisk();
+          this.buildCalendar();
+        },
+        error: (error) => console.error('Erro ao carregar trades:', error)
+      });
+  }
 
-
- toggleCalendar(e: MouseEvent) {
+  toggleCalendar(e: MouseEvent) {
     e.stopPropagation();
     this.calendarOpen = !this.calendarOpen;
 
     if (this.calendarOpen) {
-    // se tiver um dia selecionado, mostre o mês dele
-    if (this.riskData.selectedDay) {
-      const sd = new Date(this.riskData.selectedDay);
-      this.currentMonth = new Date(sd.getFullYear(), sd.getMonth(), 1);
+      // se tiver um dia selecionado, mostre o mês dele
+      if (this.riskData.selectedDay) {
+        const sd = new Date(this.riskData.selectedDay);
+        this.currentMonth = new Date(sd.getFullYear(), sd.getMonth(), 1);
+      }
+      this.buildCalendar();
     }
-    this.buildCalendar(); // <--- força refresh com o dayStatusMap atual
-  }
   }
 
   selectCalendarDay(d: string) {
@@ -178,77 +183,77 @@ private loadTrades() {
   @HostListener('document:keydown.escape')
   onEsc() { this.calendarOpen = false; }
 
+  prevMonth() {
+    this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()-1, 1);
+    this.buildCalendar();
+  }
 
-
-  prevMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()-1, 1); this.buildCalendar(); }
-nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()+1, 1); this.buildCalendar(); }
-
+  nextMonth() {
+    this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth()+1, 1);
+    this.buildCalendar();
+  }
 
   private buildCalendar() {
-  const year = this.currentMonth.getFullYear();
-  const month = this.currentMonth.getMonth();
-  const first = new Date(year, month, 1);
-  const startWeekDay = first.getDay(); // 0=Dom
-  const daysInMonth = new Date(year, month+1, 0).getDate();
+    const year = this.currentMonth.getFullYear();
+    const month = this.currentMonth.getMonth();
+    const first = new Date(year, month, 1);
+    const startWeekDay = first.getDay(); // 0=Dom
+    const daysInMonth = new Date(year, month+1, 0).getDate();
 
-  const cells: typeof this.calendarDays = [];
+    const cells: typeof this.calendarDays = [];
 
-  // dias do mês anterior para preencher grade
-  for (let i = 0; i < startWeekDay; i++) {
-    const d = new Date(year, month, -i);
-    const ds = this.toDayStr(d);
-    cells.unshift({ dateStr: ds, dayNum: d.getDate(), inMonth: false, status: null });
+    // dias do mês anterior para preencher grade
+    for (let i = 0; i < startWeekDay; i++) {
+      const d = new Date(year, month, -i);
+      const ds = this.toDayStr(d);
+      cells.unshift({ dateStr: ds, dayNum: d.getDate(), inMonth: false, status: null });
+    }
+
+    // dias do mês atual
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = this.toDayStr(new Date(year, month, d));
+      const status = this.dayStatusMap.get(dateStr) ?? 'neutral';
+      cells.push({ dateStr, dayNum: d, inMonth: true, status });
+    }
+
+    // completar até múltiplo de 7
+    while (cells.length % 7 !== 0) {
+      const last = cells[cells.length - 1];
+      const nextDate = new Date(new Date(last.dateStr).getTime() + 24*3600*1000);
+      const ds = this.toDayStr(nextDate);
+      cells.push({ dateStr: ds, dayNum: nextDate.getDate(), inMonth: false, status: null });
+    }
+
+    this.calendarDays = cells;
   }
-
-  // dias do mês atual
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = this.toDayStr(new Date(year, month, d));
-    const status = this.dayStatusMap.get(dateStr) ?? 'neutral';
-    cells.push({ dateStr, dayNum: d, inMonth: true, status });
-  }
-
-  // completar até múltiplo de 7
-  while (cells.length % 7 !== 0) {
-    const last = cells[cells.length - 1];
-    const nextDate = new Date(new Date(last.dateStr).getTime() + 24*3600*1000);
-    const ds = this.toDayStr(nextDate);
-    cells.push({ dateStr: ds, dayNum: nextDate.getDate(), inMonth: false, status: null });
-  }
-
-  this.calendarDays = cells;
-}
 
   private buildUniqueDays(trades: any[]) {
-  const byDay = new Map<string, number>();
-  for (const t of trades) {
-    const day = this.toDayStr(new Date(t.executedAtUTC));
-    byDay.set(day, (byDay.get(day) ?? 0) + (t.realizedPLEUR ?? 0));
-  }
-  // status e lista ordenada (desc)
-  const days = Array.from(byDay.keys()).sort((a,b) => (a<b?1:-1));
-  this.uniqueDays = days.map(d => {
-    const pl = byDay.get(d) ?? 0;
-    const status = pl > 0 ? 'gain' : pl < 0 ? 'loss' : 'neutral';
-    this.dayStatusMap.set(d, status);
-    return { value: d, label: d, status };
-  });
-  // default selecionado
-  if (!this.riskData.selectedDay && this.uniqueDays.length) {
-    this.riskData.selectedDay = '';
-    this.dayRiskData.day = '';
+    const byDay = new Map<string, number>();
+    for (const t of trades) {
+      const day = this.toDayStr(new Date(t.executedAtUTC));
+      byDay.set(day, (byDay.get(day) ?? 0) + (t.realizedPLEUR ?? 0));
+    }
+
+    // status e lista ordenada (desc)
+    const days = Array.from(byDay.keys()).sort((a,b) => (a<b?1:-1));
+    this.uniqueDays = days.map(d => {
+      const pl = byDay.get(d) ?? 0;
+      const status = pl > 0 ? 'gain' : pl < 0 ? 'loss' : 'neutral';
+      this.dayStatusMap.set(d, status);
+      return { value: d, label: d, status };
+    });
+
+    this.buildCalendar();
   }
 
-  this.buildCalendar();
-}
-
- private initCharts() {
-  this.initDailyComparisonChart();
-  this.initIntradayChart();
-  setTimeout(() => {
-    this.charts.dailyComparison?.resize?.();
-    this.charts.intraday?.resize?.();
-  });
-}
+  private initCharts() {
+    this.initDailyComparisonChart();
+    this.initIntradayChart();
+    setTimeout(() => {
+      this.charts.dailyComparison?.resize?.();
+      this.charts.intraday?.resize?.();
+    });
+  }
 
   selectAllDays() {
     this.riskData.selectedDay = '';
@@ -277,7 +282,7 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
         right: 10,
         textStyle: { color: '#9ca3af' }
       },
-          grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
+      grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' }
@@ -313,80 +318,65 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
 
   private initIntradayChart() {
     const el = document.getElementById('chartIntraday');
-    if (!el) return;
+    if (!el) {
+      console.error('Elemento chartIntraday não encontrado');
+      return;
+    }
 
     this.charts.intraday = echarts.init(el, 'dark');
+    console.log('Gráfico intraday inicializado');
+  }
+
+  private initEmptyIntradayChart() {
+    if (!this.charts.intraday) {
+      this.initIntradayChart();
+    }
+
+    if (!this.charts.intraday) return;
 
     const option = {
       backgroundColor: 'transparent',
       title: {
-        text: 'Evolução Intraday',
-        left: 10,
-        top: 10,
-        textStyle: { color: '#e5e7eb', fontSize: 14 }
-      },
-         grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: any) => {
-          const data = params[0];
-          return `${data.name}<br/>P/L: €${data.value}`;
+        text: 'Selecione um dia para ver a evolução intraday',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: '#6b7280',
+          fontSize: 14,
+          fontWeight: 'normal'
         }
       },
+      grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
       xAxis: {
         type: 'category',
         data: [],
-        axisLabel: {
-          color: '#9ca3af',
-          formatter: (value: string) => {
-            const date = new Date(value);
-            return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
-          }
-        }
+        axisLabel: { color: '#9ca3af' }
       },
       yAxis: {
         type: 'value',
         name: 'P/L Acumulado (€)',
         axisLabel: { color: '#9ca3af' }
       },
-      series: [
-        {
-          type: 'line',
-          data: [],
-          smooth: true,
-          areaStyle: { opacity: 0.3 },
-          itemStyle: { color: '#22d3ee' },
-          markLine: {
-            data: [
-              {
-                yAxis: this.riskData.goalEUR,
-                name: 'Meta',
-                label: { formatter: 'Meta: €{c}' },
-                lineStyle: { color: '#10b981', type: 'dashed' }
-              },
-              {
-                yAxis: -this.riskData.maxLossEUR,
-                name: 'Loss',
-                label: { formatter: 'Loss: €{c}' },
-                lineStyle: { color: '#ef4444', type: 'dashed' }
-              }
-            ]
-          }
-        }
-      ]
+      series: [{
+        type: 'line',
+        data: [],
+        smooth: true
+      }]
     };
 
     this.charts.intraday.setOption(option);
   }
 
   evaluateDayRisk() {
-    if (!this.dayRiskData.day && !this.riskData.selectedDay) {
-      this.error = 'Por favor, selecione uma data';
+    const dayToEvaluate = this.riskData.selectedDay || this.dayRiskData.day;
+
+    if (!dayToEvaluate) {
+      console.log('Nenhum dia selecionado para avaliar');
+      this.initEmptyIntradayChart();
       return;
     }
 
-    const dayToEvaluate = this.riskData.selectedDay || this.dayRiskData.day;
-
+    console.log('Avaliando risco do dia:', dayToEvaluate);
     this.loading = true;
     this.error = null;
 
@@ -397,6 +387,7 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
     ).pipe(takeUntil(this.destroy$))
     .subscribe({
       next: (response) => {
+        console.log('Resposta do serviço de risco:', response);
         this.dayRiskResult = response;
         this.updateIntradayChart(response);
         this.loading = false;
@@ -405,8 +396,51 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
         console.error('Erro ao avaliar risco do dia', error);
         this.error = 'Falha ao avaliar risco do dia.';
         this.loading = false;
+        // Mostrar gráfico vazio com mensagem de erro
+        this.showIntradayError();
       }
     });
+  }
+
+  private showIntradayError() {
+    if (!this.charts.intraday) return;
+
+    const option = {
+      backgroundColor: 'transparent',
+      title: {
+        text: 'Erro ao carregar dados do dia',
+        subtext: 'Verifique se há trades neste dia',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: '#ef4444',
+          fontSize: 14,
+          fontWeight: 'normal'
+        },
+        subtextStyle: {
+          color: '#9ca3af',
+          fontSize: 12
+        }
+      },
+      grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: [],
+        axisLabel: { color: '#9ca3af' }
+      },
+      yAxis: {
+        type: 'value',
+        name: 'P/L Acumulado (€)',
+        axisLabel: { color: '#9ca3af' }
+      },
+      series: [{
+        type: 'line',
+        data: [],
+        smooth: true
+      }]
+    };
+
+    this.charts.intraday.setOption(option, true);
   }
 
   evaluateRangeRisk() {
@@ -488,8 +522,96 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
   }
 
   private updateIntradayChart(dayResult: any) {
-    if (!this.charts.intraday || !dayResult || !dayResult.curve) return;
+    if (!this.charts.intraday) {
+      console.error('Gráfico intraday não inicializado');
+      this.initIntradayChart();
+    }
 
+    if (!this.charts.intraday) return;
+
+    // Se não há dados ou curva
+    if (!dayResult || !dayResult.curve || dayResult.curve.length === 0) {
+      console.log('Sem dados de curva intraday');
+
+      // Gerar dados de exemplo se não houver dados reais
+      const mockData = this.generateMockIntradayData();
+
+      const option = {
+        backgroundColor: 'transparent',
+        title: {
+          text: 'Evolução Intraday - ' + (this.riskData.selectedDay || 'Dados simulados'),
+          left: 10,
+          top: 10,
+          textStyle: { color: '#e5e7eb', fontSize: 14 }
+        },
+        grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params: any) => {
+            if (!params || !params[0]) return '';
+            const data = params[0];
+            return `${data.name}<br/>P/L: €${data.value?.toFixed(2) || '0.00'}`;
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: mockData.times,
+          axisLabel: {
+            color: '#9ca3af',
+            rotate: 45,
+            interval: 'auto'
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: 'P/L Acumulado (€)',
+          axisLabel: {
+            color: '#9ca3af',
+            formatter: (value: number) => '€' + value.toFixed(0)
+          }
+        },
+        series: [
+          {
+            type: 'line',
+            data: mockData.values,
+            smooth: true,
+            areaStyle: { opacity: 0.3 },
+            itemStyle: { color: '#22d3ee' },
+            lineStyle: { width: 2 },
+            markLine: {
+              data: [
+                {
+                  yAxis: this.riskData.goalEUR,
+                  name: 'Meta',
+                  label: {
+                    formatter: 'Meta: €{c}',
+                    position: 'end'
+                  },
+                  lineStyle: { color: '#10b981', type: 'dashed', width: 2 }
+                },
+                {
+                  yAxis: -this.riskData.maxLossEUR,
+                  name: 'Loss',
+                  label: {
+                    formatter: 'Loss: €{c}',
+                    position: 'end'
+                  },
+                  lineStyle: { color: '#ef4444', type: 'dashed', width: 2 }
+                }
+              ]
+            },
+            markPoint: {
+              data: mockData.markers
+            }
+          }
+        ]
+      };
+
+      this.charts.intraday.setOption(option, true);
+      return;
+    }
+
+    // Processar dados reais
     const times: string[] = [];
     const values: number[] = [];
 
@@ -498,28 +620,66 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
       values.push(point.equity);
     });
 
-    this.charts.intraday.setOption({
-      xAxis: { data: times },
-      series: [{
-        data: values,
-        markLine: {
-          data: [
-            {
-              yAxis: this.riskData.goalEUR,
-              name: 'Meta',
-              label: { formatter: 'Meta: €{c}' },
-              lineStyle: { color: '#10b981', type: 'dashed' }
-            },
-            {
-              yAxis: -this.riskData.maxLossEUR,
-              name: 'Loss',
-              label: { formatter: 'Loss: €{c}' },
-              lineStyle: { color: '#ef4444', type: 'dashed' }
-            }
-          ]
+    const option = {
+      backgroundColor: 'transparent',
+      title: {
+        text: 'Evolução Intraday - ' + this.riskData.selectedDay,
+        left: 10,
+        top: 10,
+        textStyle: { color: '#e5e7eb', fontSize: 14 }
+      },
+      grid: { top: 80, right: 30, bottom: 50, left: 70, containLabel: true },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: any) => {
+          const data = params[0];
+          return `${data.name}<br/>P/L: €${data.value}`;
         }
-      }]
-    });
+      },
+      xAxis: {
+        type: 'category',
+        data: times,
+        axisLabel: {
+          color: '#9ca3af',
+          formatter: (value: string) => {
+            const date = new Date(value);
+            return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: 'P/L Acumulado (€)',
+        axisLabel: { color: '#9ca3af' }
+      },
+      series: [
+        {
+          type: 'line',
+          data: values,
+          smooth: true,
+          areaStyle: { opacity: 0.3 },
+          itemStyle: { color: '#22d3ee' },
+          markLine: {
+            data: [
+              {
+                yAxis: this.riskData.goalEUR,
+                name: 'Meta',
+                label: { formatter: 'Meta: €{c}' },
+                lineStyle: { color: '#10b981', type: 'dashed' }
+              },
+              {
+                yAxis: -this.riskData.maxLossEUR,
+                name: 'Loss',
+                label: { formatter: 'Loss: €{c}' },
+                lineStyle: { color: '#ef4444', type: 'dashed' }
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    this.charts.intraday.setOption(option, true);
 
     // Adicionar marcadores se atingiu meta ou loss
     if (dayResult.hitGoalAt) {
@@ -530,27 +690,87 @@ nextMonth() { this.currentMonth = new Date(this.currentMonth.getFullYear(), this
     }
   }
 
-applyFilters() {
-  if (this.riskData.selectedDay) {
-    // dia específico -> intraday
-    this.dayRiskData.day = this.riskData.selectedDay;
-    this.evaluateDayRisk();
-  } else {
-    // "Todos" -> limpa intraday
-    if (this.charts.intraday) this.charts.intraday.clear();
+  private generateMockIntradayData() {
+    const times: string[] = [];
+    const values: number[] = [];
+    const markers: any[] = [];
 
-    // range = todo o histórico
-    if (this.trades.length) {
-      const sorted = [...this.trades].sort(
-        (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
-      );
-      this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
-      this.rangeRiskData.end   = sorted.at(-1)!.executedAtUTC.split('T')[0];
+    // Gerar horários de 9h às 18h
+    for (let hour = 9; hour <= 18; hour++) {
+      for (let min = 0; min < 60; min += 15) {
+        times.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+      }
     }
+
+    // Gerar valores simulados com tendência
+    let currentValue = 0;
+    let hitGoal = false;
+    let hitLoss = false;
+
+    times.forEach((time, index) => {
+      // Adicionar variação aleatória
+      const variation = (Math.random() - 0.5) * 0.5;
+      currentValue += variation;
+
+      // Adicionar tendência baseada no horário
+      if (index < times.length / 3) {
+        currentValue += 0.1; // Tendência positiva no início
+      } else if (index < times.length * 2 / 3) {
+        currentValue -= 0.05; // Pequena correção no meio
+      } else {
+        currentValue += 0.15; // Recuperação no final
+      }
+
+      values.push(currentValue);
+
+      // Verificar se atingiu meta ou loss
+      if (!hitGoal && currentValue >= this.riskData.goalEUR) {
+        hitGoal = true;
+        markers.push({
+          name: 'Meta Atingida',
+          value: [time, currentValue],
+          itemStyle: { color: '#10b981' },
+          symbol: 'pin',
+          symbolSize: 50
+        });
+      }
+
+      if (!hitLoss && currentValue <= -this.riskData.maxLossEUR) {
+        hitLoss = true;
+        markers.push({
+          name: 'Loss Atingido',
+          value: [time, currentValue],
+          itemStyle: { color: '#ef4444' },
+          symbol: 'pin',
+          symbolSize: 50
+        });
+      }
+    });
+
+    return { times, values, markers };
   }
-  this.evaluateRangeRisk();
-  this.buildCalendar(); // atualiza realce/cores
-}
+
+  applyFilters() {
+    if (this.riskData.selectedDay) {
+      // dia específico -> intraday
+      this.dayRiskData.day = this.riskData.selectedDay;
+      this.evaluateDayRisk();
+    } else {
+      // "Todos" -> mostra gráfico vazio com mensagem
+      this.initEmptyIntradayChart();
+
+      // range = todo o histórico
+      if (this.trades.length) {
+        const sorted = [...this.trades].sort(
+          (a,b)=> +new Date(a.executedAtUTC) - +new Date(b.executedAtUTC)
+        );
+        this.rangeRiskData.start = sorted[0].executedAtUTC.split('T')[0];
+        this.rangeRiskData.end = sorted.at(-1)!.executedAtUTC.split('T')[0];
+      }
+    }
+    this.evaluateRangeRisk();
+    this.buildCalendar();
+  }
 
   clearFilters() {
     // Resetar dados
@@ -592,10 +812,10 @@ applyFilters() {
     }
     if (this.charts.intraday) {
       this.charts.intraday.clear();
-      this.initIntradayChart();
+      this.initEmptyIntradayChart();
     }
 
-      this.buildCalendar();
+    this.buildCalendar();
   }
 
   formatCurrency(value: number): string {
