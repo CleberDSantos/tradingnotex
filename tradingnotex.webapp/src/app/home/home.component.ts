@@ -10,7 +10,7 @@ type BillingCycle = 'monthly' | 'yearly';
   // tudo em um único arquivo: template + estilos inline
   template: `
     <div
-      class="min-h-screen bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100"
+      class="min-h-screen bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 mt-20"
     >
       <!-- NAV -->
      <nav
@@ -19,7 +19,7 @@ type BillingCycle = 'monthly' | 'yearly';
   role="navigation"
   aria-label="Primário"
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style="margin: unset;">
     <div class="flex h-16 items-center">
       <!-- LOGO (sempre à esquerda) -->
       <div class="shrink-0">
