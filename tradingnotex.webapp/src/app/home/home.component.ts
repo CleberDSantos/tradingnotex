@@ -86,6 +86,16 @@ type BillingCycle = 'monthly' | 'yearly';
   </div>
 </nav>
 
+<!-- RISK STRIP (educacional, sem calls) -->
+<div class="bg-[#0a0c10]/90 border-b border-[#1b2330] text-[11px] md:text-sm text-gray-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-center gap-x-2 text-center">
+    <span>📣 Conteúdo educacional: não fornecemos <strong class="font-semibold">calls/sinais</strong> nem recomendações de investimento. Trading envolve risco de perda.</span>
+    <button (click)="riskOpen = true" class="underline underline-offset-2 hover:text-white">
+      Ler divulgação de risco
+    </button>
+  </div>
+</div>
+
 
       <!-- HERO -->
       <section id="top" class="pt-24 pb-12 px-4 relative overflow-hidden">
@@ -562,8 +572,11 @@ type BillingCycle = 'monthly' | 'yearly';
                 Começar Pro
               </button>
             </div>
-          </div>
 
+          </div>
+                  <p class="text-xs text-gray-500 mt-10">
+  Nenhuma estratégia garante resultados. Não fornecemos calls/sinais. Trading envolve risco.
+</p>
           <!-- Comparação -->
           <div id="compare" class="mt-12 overflow-x-auto">
             <table
@@ -592,6 +605,7 @@ type BillingCycle = 'monthly' | 'yearly';
           </div>
         </div>
       </section>
+
 
       <!-- TESTIMONIALS -->
       <section id="testimonials" class="py-20 px-4 bg-[#0f131a]/50">
@@ -825,6 +839,11 @@ type BillingCycle = 'monthly' | 'yearly';
                 <li>
                   <a href="#" class="hover:text-white transition">Cookies</a>
                 </li>
+                <li>
+  <button (click)="riskOpen = true" class="hover:text-white transition">
+    Divulgação de Risco
+  </button>
+</li>
               </ul>
             </div>
           </div>
@@ -899,6 +918,79 @@ type BillingCycle = 'monthly' | 'yearly';
         </div>
       </div>
     </div>
+    <!-- RISK DISCLOSURE MODAL -->
+<div *ngIf="riskOpen" class="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" (click)="riskOpen = false">
+  <div class="bg-[#0f131a] border border-[#1b2330] rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto" (click)="$event.stopPropagation()">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-[#1b2330]">
+      <h3 class="font-semibold">Divulgação de Risco</h3>
+      <button (click)="riskOpen = false" class="text-gray-400 hover:text-white" aria-label="Fechar">
+        ✕
+      </button>
+    </div>
+
+    <div class="p-5 space-y-6 text-sm leading-relaxed text-gray-300">
+      <!-- PT -->
+      <section>
+        <h4 class="font-semibold mb-2">🚨 Avisos de Risco</h4>
+        <p>
+          Operações com <strong>futuros e forex</strong> envolvem risco substancial e não são adequadas para todos os investidores.
+          É possível perder <strong>todo o capital</strong> ou mais do que o investimento inicial. Utilize apenas
+          <strong>capital de risco</strong> – dinheiro que você pode perder sem comprometer sua segurança financeira
+          ou estilo de vida. <strong>Resultados passados não garantem resultados futuros.</strong>
+        </p>
+      </section>
+
+      <section>
+        <h4 class="font-semibold mb-2">📌 Natureza do Conteúdo</h4>
+        <p>
+          O TradingNoteX <strong>não fornece calls, sinais, recomendações de compra/venda, nem consultoria de investimentos</strong>.
+          Todo o conteúdo tem <strong>finalidade educacional</strong> e informativa. As decisões de negociação são de
+          <strong>responsabilidade exclusiva do usuário</strong>.
+        </p>
+      </section>
+
+      <section>
+        <h4 class="font-semibold mb-2">📊 Divulgação de Desempenho Hipotético</h4>
+        <p>
+          Resultados hipotéticos possuem limitações inerentes. Não há garantia de que qualquer conta atingirá
+          lucros ou perdas semelhantes aos exibidos. Simulações <strong>não</strong> envolvem risco financeiro real e
+          <strong>não</strong> capturam plenamente fatores emocionais/psicológicos do trading real. Condições de mercado,
+          liquidez e atrasos de execução podem afetar adversamente os resultados.
+        </p>
+      </section>
+
+      <hr class="border-[#1b2330]">
+
+      <!-- EN -->
+      <section>
+        <h4 class="font-semibold mb-2">⚠️ Risk Disclosure (EN)</h4>
+        <p>
+          Futures and forex trading involve substantial risk and are not suitable for every investor. An investor could
+          potentially lose all or more than their initial investment. Only risk capital should be used for trading.
+          Past performance is not necessarily indicative of future results.
+        </p>
+        <p class="mt-3">
+          <strong>Content is educational only:</strong> TradingNoteX does not provide trade calls, signals, investment
+          recommendations, or financial advice. All trading decisions are solely your responsibility.
+        </p>
+      </section>
+
+      <section>
+        <h4 class="font-semibold mb-2">📊 Hypothetical Performance Disclosure (EN)</h4>
+        <p>
+          Hypothetical performance results have many inherent limitations. No representation is being made that any
+          account will or is likely to achieve profits or losses similar to those shown. Hypothetical trading does not
+          involve financial risk and cannot fully reflect emotional and psychological factors of real trading. Market
+          conditions, liquidity, and execution delays may adversely affect results.
+        </p>
+      </section>
+
+      <div class="pt-2">
+        <em class="text-gray-400">Trade responsibly.</em>
+      </div>
+    </div>
+  </div>
+</div>
   `,
   styles: [
     `
@@ -917,6 +1009,7 @@ export class HomeComponent {
   showCookieBar = false;
   showScrollTop = false;
   videoOpen = false;
+  riskOpen = false;
 
   brands = ['NinjaTrader', 'TradingView', 'MetaTrader', 'Interactive Brokers'];
 
