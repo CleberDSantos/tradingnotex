@@ -217,7 +217,7 @@ type BillingCycle = 'monthly' | 'yearly';
 
   <!-- HERO -->
 <!-- HERO -->
-<section id="top" class="mt-1o relative bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 min-h-[70vh] flex items-center justify-center">
+<section id="top" class="mt-10 relative bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 min-h-[70vh] flex items-center justify-center">
   <div class="max-w-7xl mx-auto px-6 lg:px-12 text-center">
 
     <!-- Headline -->
