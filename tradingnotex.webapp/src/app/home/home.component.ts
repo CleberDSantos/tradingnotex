@@ -1,677 +1,975 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { trigger, state, style, transition, animate, keyframes } from '@angular/animations';
 
 type BillingCycle = 'monthly' | 'yearly';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
-  // tudo em um único arquivo: template + estilos inline
+  imports: [CommonModule, FormsModule],
+ animations: [
+    trigger('fadeInUp', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('0.6s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ])
+    ]),
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ transform: 'translateX(-100%)' }),
+        animate('0.3s ease-out', style({ transform: 'translateX(0)' }))
+      ])
+    ]),
+    trigger('pulse', [
+      transition(':enter', [
+        animate('1s ease-in-out', keyframes([
+          style({ transform: 'scale(1)' }),
+          style({ transform: 'scale(1.05)' }),
+          style({ transform: 'scale(1)' })
+        ]))
+      ])
+    ]),
+    trigger('fadeSlide', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(10px)' }),
+        animate('0.8s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('0.4s ease-in', style({ opacity: 0, transform: 'translateY(-10px)' }))
+      ])
+    ])
+  ],
   template: `
-    <div
-      class="min-h-screen bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 mt-20"
-    >
-      <!-- NAV -->
-     <nav
-  [ngClass]="isScrolled ? 'bg-[#0a0c10]/95 backdrop-blur-md border-b border-[#1b2330]' : 'bg-transparent'"
-  class="fixed top-0 w-full z-50 transition-all duration-300"
-  role="navigation"
-  aria-label="Primário"
->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style="margin: unset;">
-    <div class="flex h-16 items-center">
-      <!-- LOGO (sempre à esquerda) -->
-      <div class="shrink-0">
-        <button (click)="scrollToSection('top')"
-                class="inline-flex items-center h-10 leading-none"
-                aria-label="Ir para o início">
-          <span class="text-2xl font-bold bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] bg-clip-text text-transparent">
-            TradingNoteX
-          </span>
-        </button>
+    <div class="min-h-screen bg-gradient-to-br from-[#0a0c10] via-[#0f131a] to-[#0a0c10] text-gray-100 overflow-x-hidden">
+
+      <!-- Animated Background Elements -->
+      <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-[#22d3ee]/10 rounded-full blur-3xl animate-float"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-[#f59e0b]/10 rounded-full blur-3xl animate-float-delayed"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-[#22d3ee]/5 to-[#f59e0b]/5 rounded-full blur-3xl animate-spin-slow"></div>
       </div>
 
-      <!-- MENU DESKTOP (direita) -->
-      <div class="ml-auto hidden md:flex items-center gap-6">
-        <button (click)="scrollToSection('features')"
-                class="inline-flex items-center h-10 px-2 leading-none text-gray-400 hover:text-white transition">
-          Recursos
-        </button>
-        <button (click)="scrollToSection('pricing')"
-                class="inline-flex items-center h-10 px-2 leading-none text-gray-400 hover:text-white transition">
-          Preços
-        </button>
-        <button (click)="scrollToSection('testimonials')"
-                class="inline-flex items-center h-10 px-2 leading-none text-gray-400 hover:text-white transition">
-          Depoimentos
-        </button>
-        <a href="/login"
-           class="inline-flex items-center h-10 px-2 leading-none text-gray-400 hover:text-white transition">
-          Login
-        </a>
-        <button
-          (click)="handleCheckout('premium_monthly')"
-          class="inline-flex items-center h-10 px-4 leading-none bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-medium hover:shadow-lg hover:shadow-[#22d3ee]/25 transition-all transform hover:scale-105">
-          Teste Grátis
-        </button>
-      </div>
+      <!-- Enhanced Navigation -->
+      <nav
+        [ngClass]="{
+          'bg-[#0a0c10]/95 backdrop-blur-xl border-b border-[#1b2330] shadow-lg': isScrolled,
+          'bg-transparent': !isScrolled
+        }"
+        class="fixed top-0 w-full z-50 transition-all duration-500"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <!-- Logo with Animation -->
+            <div class="flex items-center gap-2 cursor-pointer group" (click)="scrollToSection('top')">
+              <div class="relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] blur-lg opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <span class="relative text-2xl font-bold bg-gradient-to-r from-[#22d3ee] via-[#10b981] to-[#f59e0b] bg-clip-text text-transparent animate-gradient">
+                  TradingNoteX
+                </span>
+              </div>
+              <span class="hidden md:inline-block px-2 py-0.5 bg-[#10b981]/20 text-[#10b981] text-xs rounded-full font-semibold">
+                PRO
+              </span>
+            </div>
 
-      <!-- BOTÃO MOBILE (fica à direita no mobile) -->
-      <button
-        (click)="mobileMenuOpen = !mobileMenuOpen"
-        class="md:hidden ml-auto inline-flex items-center h-10 p-2 text-gray-400 hover:text-white"
-        [attr.aria-expanded]="mobileMenuOpen"
-        aria-controls="mobile-menu"
-        aria-label="Abrir menu">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- MENU MOBILE -->
-  <div *ngIf="mobileMenuOpen" id="mobile-menu" class="md:hidden bg-[#0f131a] border-t border-[#1b2330]">
-    <div class="px-4 py-4 space-y-3">
-      <button (click)="scrollToSection('features')" class="block w-full text-left text-gray-400 hover:text-white py-2">Recursos</button>
-      <button (click)="scrollToSection('pricing')" class="block w-full text-left text-gray-400 hover:text-white py-2">Preços</button>
-      <button (click)="scrollToSection('testimonials')" class="block w-full text-left text-gray-400 hover:text-white py-2">Depoimentos</button>
-      <a href="/login" class="block text-gray-400 hover:text-white py-2">Login</a>
-      <button (click)="handleCheckout('premium_monthly')"
-              class="w-full px-4 py-2 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-medium">
-        Teste Grátis
-      </button>
-    </div>
-  </div>
-</nav>
-
-<!-- RISK STRIP (educacional, sem calls) -->
-<div class="bg-[#0a0c10]/90 border-b border-[#1b2330] text-[11px] md:text-sm text-gray-300">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-center gap-x-2 text-center">
-    <span>📣 Conteúdo educacional: não fornecemos <strong class="font-semibold">calls/sinais</strong> nem recomendações de investimento. Trading envolve risco de perda.</span>
-    <button (click)="riskOpen = true" class="underline underline-offset-2 hover:text-white">
-      Ler divulgação de risco
-    </button>
-  </div>
-</div>
-
-
-      <!-- HERO -->
-      <section id="top" class="pt-24 pb-12 px-4 relative overflow-hidden">
-        <div
-          class="absolute inset-0 bg-gradient-to-b from-[#22d3ee]/5 to-transparent"
-        ></div>
-        <div
-          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#22d3ee]/10 rounded-full blur-3xl"
-        ></div>
-
-        <div class="max-w-7xl mx-auto text-center relative">
-          <span
-            class="inline-block px-4 py-1 bg-[#f59e0b]/20 text-[#f59e0b] rounded-full text-sm font-medium mb-6"
-          >
-            🚀 +500 traders usando diariamente
-          </span>
-
-          <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            <span
-              class="bg-gradient-to-r from-white via-[#22d3ee] to-[#f59e0b] bg-clip-text text-transparent"
-              >Transforme seus trades</span
-            ><br />
-            <span class="text-white">em lucro consistente</span>
-          </h1>
-
-          <p
-            class="text-xl text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed"
-          >
-            Sistema completo de análise com
-            <span class="text-[#22d3ee]">IA avançada</span>, gestão de risco
-            profissional e gamificação que mantém você
-            <span class="text-[#10b981]"> disciplinado e lucrativo</span>.
-          </p>
-
-          <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-            <button
-              (click)="handleCheckout('premium_monthly')"
-              class="group px-8 py-4 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-bold text-lg hover:shadow-xl hover:shadow-[#22d3ee]/25 transform hover:scale-105 transition-all flex items-center justify-center gap-2"
-            >
-              Começar Teste Grátis
-              <svg
-                class="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
+            <!-- Desktop Menu with Hover Effects -->
+            <div class="hidden md:flex items-center gap-6">
+              <button
+                *ngFor="let item of menuItems"
+                (click)="scrollToSection(item.id)"
+                class="relative px-3 py-2 text-gray-300 hover:text-white transition-all group"
               >
+                <span class="relative z-10">{{ item.label }}</span>
+                <span class="absolute inset-0 bg-gradient-to-r from-[#22d3ee]/20 to-[#f59e0b]/20 rounded-lg scale-0 group-hover:scale-100 transition-transform"></span>
+              </button>
+
+              <div class="h-8 w-px bg-[#1b2330]"></div>
+
+              <a href="/login" class="px-4 py-2 text-gray-300 hover:text-white transition-all hover:bg-white/5 rounded-lg">
+                Login
+              </a>
+
+              <button
+                (click)="handleCheckout('premium_monthly')"
+                class="relative px-6 py-2.5 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-semibold overflow-hidden group"
+              >
+                <span class="relative z-10 flex items-center gap-2">
+                  Teste Grátis
+                  <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                  </svg>
+                </span>
+                <div class="absolute inset-0 bg-gradient-to-r from-[#f59e0b] to-[#22d3ee] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </button>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button
+              (click)="mobileMenuOpen = !mobileMenuOpen"
+              class="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M9 5l7 7-7 7"
+                  stroke-width="2"
+                  [attr.d]="mobileMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"
                 />
               </svg>
             </button>
+          </div>
+        </div>
+
+        <!-- Enhanced Mobile Menu -->
+        <div
+          *ngIf="mobileMenuOpen"
+          @slideIn
+          class="md:hidden bg-[#0f131a]/95 backdrop-blur-xl border-t border-[#1b2330]"
+        >
+          <div class="px-4 py-6 space-y-3">
             <button
-              (click)="videoOpen = true"
-              class="px-8 py-4 bg-[#1b2330] border border-[#2a3441] rounded-lg font-bold text-lg hover:bg-[#2a3441] transition-all flex items-center justify-center gap-2"
+              *ngFor="let item of menuItems"
+              (click)="scrollToSection(item.id); mobileMenuOpen = false"
+              class="block w-full text-left px-4 py-3 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              {{ item.label }}
+            </button>
+            <div class="h-px bg-[#1b2330] my-4"></div>
+            <a href="/login" class="block px-4 py-3 rounded-lg hover:bg-white/5 transition-colors">
+              Login
+            </a>
+            <button
+              (click)="handleCheckout('premium_monthly')"
+              class="w-full px-4 py-3 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-semibold"
+            >
+              Começar Teste Grátis
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- HERO SECTION ENHANCED -->
+      <section id="top" class="relative min-h-screen flex items-center justify-center pt-20 pb-12 px-4">
+
+        <!-- Animated Trading Chart Background -->
+        <div class="absolute inset-0 opacity-10">
+          <svg class="w-full h-full" viewBox="0 0 1440 800">
+            <polyline
+              fill="none"
+              stroke="url(#gradient)"
+              stroke-width="2"
+             [attr.points]="chartPoints"
+              class="animate-draw-line"
+            />
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#22d3ee" />
+                <stop offset="50%" stop-color="#10b981" />
+                <stop offset="100%" stop-color="#f59e0b" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <div class="max-w-7xl mx-auto text-center relative z-10">
+
+          <!-- Professional Badge -->
+          <div @fadeInUp class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10b981]/20 to-[#22d3ee]/20 rounded-full mb-6 border border-[#10b981]/30">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
+            </span>
+            <span class="text-sm font-medium">
+              <span class="text-[#10b981]">{{ onlineUsers }}</span> traders evoluindo agora
+            </span>
+          </div>
+
+          <!-- Main Headline with Carousel -->
+          <h1 @fadeInUp class="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            <span
+              *ngIf="currentHeadlineIndex === 0"
+              @fadeSlide
+              class="block bg-gradient-to-r from-white via-[#22d3ee] to-[#10b981] bg-clip-text text-transparent animate-gradient"
+            >
+              Transforme dados em disciplina
+            </span>
+            <span
+              *ngIf="currentHeadlineIndex === 1"
+              @fadeSlide
+              class="block bg-gradient-to-r from-white via-[#10b981] to-[#f59e0b] bg-clip-text text-transparent animate-gradient"
+            >
+              Evolua com métricas profissionais
+            </span>
+            <span
+              *ngIf="currentHeadlineIndex === 2"
+              @fadeSlide
+              class="block bg-gradient-to-r from-white via-[#f59e0b] to-[#22d3ee] bg-clip-text text-transparent animate-gradient"
+            >
+              Domine sua psicologia no trading
+            </span>
+            <span class="block mt-2 text-3xl sm:text-4xl md:text-6xl">
+              Seja um <span class="text-[#f59e0b]">trader profissional</span>
+            </span>
+          </h1>
+
+          <!-- Subheadline -->
+          <p @fadeInUp class="text-lg sm:text-xl text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Plataforma profissional com <span class="text-[#22d3ee] font-semibold">análise inteligente</span> que mapeia seus padrões,
+            desenvolve sua disciplina e transforma você em um <span class="text-[#10b981] font-semibold">trader consistente</span>
+          </p>
+
+          <!-- App Screenshots Carousel -->
+          <div @fadeInUp class="relative max-w-5xl mx-auto mb-8 h-[400px] overflow-hidden rounded-2xl border border-[#1b2330] bg-[#0f131a]/50">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div
+                *ngFor="let screen of appScreens; let i = index"
+                [ngClass]="{
+                  'opacity-100 scale-100': i === currentScreenIndex,
+                  'opacity-0 scale-95': i !== currentScreenIndex
+                }"
+                class="absolute inset-4 transition-all duration-700"
+              >
+                <div class="relative h-full">
+                  <img
+                    [src]="screen.url"
+                    [alt]="screen.title"
+                    class="w-full h-full object-cover rounded-xl"
+                  />
+                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a0c10] to-transparent p-6">
+                    <h3 class="text-xl font-bold mb-2">{{ screen.title }}</h3>
+                    <p class="text-gray-400">{{ screen.description }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Carousel Indicators -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+              <button
+                *ngFor="let screen of appScreens; let i = index"
+                (click)="setCurrentScreen(i)"
+                class="w-2 h-2 rounded-full transition-all duration-300"
+                [ngClass]="{
+                  'bg-[#22d3ee] w-8': i === currentScreenIndex,
+                  'bg-gray-600 hover:bg-gray-400': i !== currentScreenIndex
+                }"
+              ></button>
+            </div>
+          </div>
+
+          <!-- CTA Buttons with Enhanced Effects -->
+          <div @fadeInUp class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <button
+              (click)="handleCheckout('premium_monthly')"
+              class="group relative px-8 py-4 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-xl font-bold text-lg overflow-hidden transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-[#22d3ee]/30"
+            >
+              <span class="relative z-10 flex items-center justify-center gap-2">
+                Começar Jornada Profissional
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+              </span>
+              <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+            </button>
+
+            <button
+              (click)="openInteractiveDemo()"
+              class="group px-8 py-4 bg-[#1b2330]/80 backdrop-blur border border-[#2a3441] rounded-xl font-bold text-lg hover:bg-[#2a3441]/80 transition-all duration-300 flex items-center justify-center gap-2"
             >
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6 4l12 6-12 6V4z" />
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
               </svg>
-              Ver Demo (2 min)
+              Ver Plataforma em Ação
             </button>
           </div>
 
-          <p class="text-sm text-gray-500">
-            ✓ 7 dias grátis • ✓ Cancele quando quiser • ✓ Sem cartão necessário
-          </p>
+          <!-- Trust Badges -->
+          <div @fadeInUp class="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400 mb-12">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              7 dias grátis
+            </div>
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+              </svg>
+              Sem cartão necessário
+            </div>
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              Cancele quando quiser
+            </div>
+          </div>
 
-          <!-- Stats -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16">
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 backdrop-blur-md hover:border-[#22d3ee]/50 transition-all"
-            >
-              <div class="text-3xl font-bold text-[#22d3ee]">15K+</div>
-              <div class="text-gray-400 text-sm mt-1">Trades Analisados</div>
+          <!-- Professional Stats -->
+          <div @fadeInUp class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div class="group relative bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-6 hover:border-[#22d3ee]/50 transition-all duration-300 hover:transform hover:scale-105 overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative z-10">
+                <div class="text-3xl md:text-4xl font-bold text-[#22d3ee]">
+                  {{ animatedStats.trades }}K+
+                </div>
+                <div class="text-gray-400 text-sm mt-1">Trades Analisados</div>
+              </div>
             </div>
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 backdrop-blur-md hover:border-[#10b981]/50 transition-all"
-            >
-              <div class="text-3xl font-bold text-[#10b981]">68%</div>
-              <div class="text-gray-400 text-sm mt-1">Win Rate Médio</div>
+
+            <div class="group relative bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-6 hover:border-[#10b981]/50 transition-all duration-300 hover:transform hover:scale-105 overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-[#10b981]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative z-10">
+                <div class="text-3xl md:text-4xl font-bold text-[#10b981]">
+                  {{ animatedStats.discipline }}%
+                </div>
+                <div class="text-gray-400 text-sm mt-1">Melhoria em Disciplina</div>
+              </div>
             </div>
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 backdrop-blur-md hover:border-[#f59e0b]/50 transition-all"
-            >
-              <div class="text-3xl font-bold text-[#f59e0b]">€3.2M</div>
-              <div class="text-gray-400 text-sm mt-1">Volume Gerenciado</div>
+
+            <div class="group relative bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-6 hover:border-[#f59e0b]/50 transition-all duration-300 hover:transform hover:scale-105 overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-[#f59e0b]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative z-10">
+                <div class="text-3xl md:text-4xl font-bold text-[#f59e0b]">
+                  {{ animatedStats.users }}+
+                </div>
+                <div class="text-gray-400 text-sm mt-1">Traders Profissionais</div>
+              </div>
             </div>
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 backdrop-blur-md hover:border-[#8b5cf6]/50 transition-all"
-            >
-              <div class="text-3xl font-bold text-[#8b5cf6]">4.9★</div>
-              <div class="text-gray-400 text-sm mt-1">Avaliação</div>
+
+            <div class="group relative bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-6 hover:border-[#8b5cf6]/50 transition-all duration-300 hover:transform hover:scale-105 overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-[#8b5cf6]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative z-10">
+                <div class="text-3xl md:text-4xl font-bold text-[#8b5cf6]">
+                  {{ animatedStats.rating }}★
+                </div>
+                <div class="text-gray-400 text-sm mt-1">Avaliação</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- FEATURES -->
-      <section id="features" class="py-20 px-4 bg-[#0f131a]/50">
-        <div class="max-w-7xl mx-auto">
+      <!-- HOW IT WORKS - New Section -->
+      <section class="py-20 px-4 relative">
+        <div class="max-w-6xl mx-auto">
           <div class="text-center mb-12">
-            <h2 class="text-4xl font-bold mb-4">
-              Recursos que fazem a diferença
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+              O caminho para se tornar um trader profissional
             </h2>
             <p class="text-gray-400 text-lg">
-              Tudo que você precisa para evoluir como trader
+              Metodologia comprovada em 3 pilares fundamentais
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-8 relative">
+            <!-- Connection Line -->
+            <div class="hidden md:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-[#22d3ee] via-[#10b981] to-[#f59e0b]"></div>
+
+            <!-- Step 1 -->
+            <div class="relative group">
+              <div class="bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8 hover:border-[#22d3ee]/50 transition-all duration-300 hover:transform hover:-translate-y-2">
+                <div class="absolute -top-4 left-8 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white text-sm px-3 py-1 rounded-full font-bold">
+                  Registro
+                </div>
+                <div class="w-16 h-16 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Documente cada operação</h3>
+                <p class="text-gray-400">
+                  Registre contexto, emoções e decisões. A clareza começa com dados organizados.
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative group">
+              <div class="bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8 hover:border-[#10b981]/50 transition-all duration-300 hover:transform hover:-translate-y-2">
+                <div class="absolute -top-4 left-8 bg-gradient-to-r from-[#10b981] to-[#059669] text-white text-sm px-3 py-1 rounded-full font-bold">
+                  Análise
+                </div>
+                <div class="w-16 h-16 bg-gradient-to-r from-[#10b981] to-[#059669] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Identifique seus padrões</h3>
+                <p class="text-gray-400">
+                  Descubra pontos fortes, fraquezas e gatilhos emocionais que impactam suas decisões.
+                </p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative group">
+              <div class="bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8 hover:border-[#f59e0b]/50 transition-all duration-300 hover:transform hover:-translate-y-2">
+                <div class="absolute -top-4 left-8 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-sm px-3 py-1 rounded-full font-bold">
+                  Evolução
+                </div>
+                <div class="w-16 h-16 bg-gradient-to-r from-[#f59e0b] to-[#d97706] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z"/>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Desenvolva disciplina</h3>
+                <p class="text-gray-400">
+                  Transforme insights em hábitos profissionais e construa consistência duradoura.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EVOLUTION TRACKER - Replacing ROI Calculator -->
+      <section class="py-20 px-4 bg-gradient-to-b from-transparent via-[#0f131a]/50 to-transparent">
+        <div class="max-w-4xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+             Mapeie sua evolução como trader
+            </h2>
+            <p class="text-gray-400 text-lg">
+              Entenda como o TradingNoteX acelera seu desenvolvimento profissional
+            </p>
+          </div>
+
+          <div class="bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8">
+            <div class="grid md:grid-cols-2 gap-8">
+              <!-- Inputs -->
+              <div class="space-y-6">
+                <div>
+                  <label class="block text-sm font-medium text-gray-400 mb-2">
+                    Tempo de Experiência
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="range"
+                      [(ngModel)]="evolutionTracker.experience"
+                      (input)="calculateEvolution()"
+                      min="0"
+                      max="60"
+                      step="1"
+                      class="w-full"
+                    />
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>Iniciante</span>
+                      <span class="font-bold text-[#22d3ee]">
+                        {{ evolutionTracker.experience < 12 ? evolutionTracker.experience + ' meses' :
+                           Math.floor(evolutionTracker.experience / 12) + ' anos' }}
+                      </span>
+                      <span>5+ anos</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-400 mb-2">
+                    Frequência de Registro Atual
+                  </label>
+                  <div class="relative">
+                    <select
+                      [(ngModel)]="evolutionTracker.currentTracking"
+                      (change)="calculateEvolution()"
+                      class="w-full bg-[#1b2330] border border-[#2a3441] rounded-lg px-4 py-2 text-white"
+                    >
+                      <option value="none">Não registro minhas operações</option>
+                      <option value="sometimes">Registro às vezes</option>
+                      <option value="basic">Registro básico (entrada/saída)</option>
+                      <option value="detailed">Registro detalhado com contexto</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-400 mb-2">
+                    Principais Desafios
+                  </label>
+                  <div class="space-y-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="evolutionTracker.challenges.discipline"
+                        (change)="calculateEvolution()"
+                        class="w-4 h-4 bg-[#1b2330] border-[#2a3441] rounded text-[#22d3ee]"
+                      />
+                      <span class="text-sm">Falta de disciplina</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="evolutionTracker.challenges.emotional"
+                        (change)="calculateEvolution()"
+                        class="w-4 h-4 bg-[#1b2330] border-[#2a3441] rounded text-[#22d3ee]"
+                      />
+                      <span class="text-sm">Controle emocional</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="evolutionTracker.challenges.consistency"
+                        (change)="calculateEvolution()"
+                        class="w-4 h-4 bg-[#1b2330] border-[#2a3441] rounded text-[#22d3ee]"
+                      />
+                      <span class="text-sm">Falta de consistência</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="evolutionTracker.challenges.analysis"
+                        (change)="calculateEvolution()"
+                        class="w-4 h-4 bg-[#1b2330] border-[#2a3441] rounded text-[#22d3ee]"
+                      />
+                      <span class="text-sm">Análise de desempenho</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Results -->
+              <div class="bg-gradient-to-br from-[#22d3ee]/10 to-[#f59e0b]/10 rounded-xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Sua Jornada com TradingNoteX</h3>
+
+                <div class="space-y-4">
+                  <!-- Discipline Score -->
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-gray-400">Disciplina</span>
+                      <span class="text-sm font-bold text-[#10b981]">
+                        +{{ evolutionTracker.improvements.discipline }}%
+                      </span>
+                    </div>
+                    <div class="w-full bg-[#1b2330] rounded-full h-2">
+                      <div
+                        class="bg-gradient-to-r from-[#10b981] to-[#22d3ee] h-2 rounded-full transition-all duration-500"
+                        [style.width.%]="evolutionTracker.improvements.discipline"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Emotional Control -->
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-gray-400">Controle Emocional</span>
+                      <span class="text-sm font-bold text-[#22d3ee]">
+                        +{{ evolutionTracker.improvements.emotional }}%
+                      </span>
+                    </div>
+                    <div class="w-full bg-[#1b2330] rounded-full h-2">
+                      <div
+                        class="bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] h-2 rounded-full transition-all duration-500"
+                        [style.width.%]="evolutionTracker.improvements.emotional"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Pattern Recognition -->
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-gray-400">Reconhecimento de Padrões</span>
+                      <span class="text-sm font-bold text-[#f59e0b]">
+                        +{{ evolutionTracker.improvements.patterns }}%
+                      </span>
+                    </div>
+                    <div class="w-full bg-[#1b2330] rounded-full h-2">
+                      <div
+                        class="bg-gradient-to-r from-[#f59e0b] to-[#d97706] h-2 rounded-full transition-all duration-500"
+                        [style.width.%]="evolutionTracker.improvements.patterns"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Time to Proficiency -->
+                  <div class="mt-6 p-4 bg-[#10b981]/20 rounded-lg">
+                    <p class="text-sm font-semibold text-[#10b981] mb-2">
+                      Tempo estimado para proficiência:
+                    </p>
+                    <p class="text-2xl font-bold text-white">
+                      {{ evolutionTracker.timeToProf }} meses
+                    </p>
+                    <p class="text-xs text-gray-400 mt-2">
+                      * Com uso consistente da plataforma e aplicação das métricas
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-[#22d3ee]/10 rounded-lg">
+                  <p class="text-sm text-gray-300">
+                    💡 <strong>Lembre-se:</strong> O sucesso no trading não vem de promessas de lucro fácil, mas da construção gradual de disciplina, conhecimento e controle emocional.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES with Cards Animation -->
+      <section id="features" class="py-20 px-4">
+        <div class="max-w-7xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+              Ferramentas profissionais para sua evolução
+            </h2>
+            <p class="text-gray-400 text-lg">
+              Desenvolva as habilidades essenciais de um trader profissional
             </p>
           </div>
 
           <div class="grid md:grid-cols-3 gap-8">
-            <!-- AI -->
+            <!-- Feature Cards with 3D Hover Effect -->
             <div
-              class="group bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 hover:border-[#22d3ee]/50 transition-all hover:transform hover:scale-105"
+              *ngFor="let feature of mainFeatures; let i = index"
+              class="group relative"
+              [style.animation-delay.ms]="i * 100"
             >
-              <div
-                class="w-12 h-12 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] rounded-lg flex items-center justify-center mb-4"
-              >
-                <!-- ícone brain -->
-                <svg
-                  class="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M7 8a4 4 0 118 0h1a3 3 0 110 6h-1a4 4 0 11-8 0H6a3 3 0 110-6h1z"
-                  />
-                </svg>
+              <div class="absolute inset-0 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-2xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300"></div>
+              <div class="relative bg-[#0f131a]/90 border border-[#1b2330] rounded-2xl p-8 hover:border-transparent transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl">
+                <div [ngClass]="feature.gradient" class="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <div [innerHTML]="feature.icon" class="w-7 h-7 text-white"></div>
+                </div>
+                <h3 class="text-xl font-bold mb-3">{{ feature.title }}</h3>
+                <p class="text-gray-400 mb-4">{{ feature.description }}</p>
+                <ul class="space-y-2 text-sm">
+                  <li *ngFor="let item of feature.items" class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-300">{{ item }}</span>
+                  </li>
+                </ul>
               </div>
-              <h3 class="text-xl font-bold mb-3">Análise com IA Avançada</h3>
-              <p class="text-gray-400 mb-4">
-                Nossa IA analisa padrões invisíveis ao olho humano e fornece
-                insights acionáveis
-              </p>
-              <ul class="space-y-2 text-sm text-gray-400">
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Detecção de padrões
-                  ocultos
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Sugestões personalizadas
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Análise preditiva
-                </li>
-              </ul>
-            </div>
-
-            <!-- Risk -->
-            <div
-              class="group bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 hover:border-[#10b981]/50 transition-all hover:transform hover:scale-105"
-            >
-              <div
-                class="w-12 h-12 bg-gradient-to-r from-[#10b981] to-[#059669] rounded-lg flex items-center justify-center mb-4"
-              >
-                <!-- ícone shield -->
-                <svg
-                  class="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                  />
-                </svg>
-              </div>
-              <h3 class="text-xl font-bold mb-3">Gestão de Risco Pro</h3>
-              <p class="text-gray-400 mb-4">
-                Proteja seu capital com ferramentas profissionais de gestão de
-                risco
-              </p>
-              <ul class="space-y-2 text-sm text-gray-400">
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Cálculo automático de
-                  posição
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Alertas de drawdown
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Stop loss inteligente
-                </li>
-              </ul>
-            </div>
-
-            <!-- Gamification -->
-            <div
-              class="group bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 hover:border-[#f59e0b]/50 transition-all hover:transform hover:scale-105"
-            >
-              <div
-                class="w-12 h-12 bg-gradient-to-r from-[#f59e0b] to-[#d97706] rounded-lg flex items-center justify-center mb-4"
-              >
-                <!-- ícone trophy -->
-                <svg
-                  class="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M8 21h8M12 17a5 5 0 005-5V4H7v8a5 5 0 005 5zm9-13h-3a5 5 0 002 4c1.66 0 3-1.79 3-4zM3 4h3a5 5 0 01-2 4C2.34 8 1 6.21 1 4z"
-                  />
-                </svg>
-              </div>
-              <h3 class="text-xl font-bold mb-3">TraderQuest Gamificação</h3>
-              <p class="text-gray-400 mb-4">
-                Sistema de gamificação que mantém você motivado e disciplinado
-              </p>
-              <ul class="space-y-2 text-sm text-gray-400">
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Níveis e conquistas
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Desafios diários
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="text-[#10b981]">✔</span> Ranking global
-                </li>
-              </ul>
             </div>
           </div>
 
-          <!-- Chips -->
-          <div class="grid md:grid-cols-4 gap-4 mt-12">
+          <!-- Quick Features Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
             <div
-              *ngFor="let f of quickFeatures"
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-lg p-4 text-center"
+              *ngFor="let feature of quickFeatures"
+              class="group bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-xl p-4 text-center hover:border-[#22d3ee]/50 transition-all duration-300 hover:transform hover:scale-105"
             >
-              <div class="text-2xl mb-2">{{ f.emoji }}</div>
-              <div class="font-semibold">{{ f.label }}</div>
+              <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{{ feature.emoji }}</div>
+              <div class="font-medium text-sm">{{ feature.label }}</div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- DEMO MODAL -->
-      <div
-        *ngIf="videoOpen"
-        role="dialog"
-        aria-modal="true"
-        class="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4"
-        (click)="videoOpen = false"
-      >
-        <div
-          class="bg-[#0f131a] border border-[#1b2330] rounded-xl max-w-3xl w-full overflow-hidden"
-          (click)="$event.stopPropagation()"
-        >
-          <div
-            class="flex items-center justify-between px-4 py-3 border-b border-[#1b2330]"
-          >
-            <div class="font-semibold flex items-center gap-2">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6 4l12 6-12 6V4z" />
-              </svg>
-              Demo — 2 minutos
-            </div>
-            <button
-              class="text-gray-400 hover:text-white"
-              (click)="videoOpen = false"
-              aria-label="Fechar"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div class="aspect-video w-full bg-black">
-            <!-- Troque a URL pelo seu vídeo -->
-            <iframe
-              title="TradingNoteX Demo"
-              class="w-full h-full"
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-            ></iframe>
-          </div>
-        </div>
-      </div>
+      <!-- PRICING Enhanced -->
+      <section id="pricing" class="py-20 px-4 relative">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#0f131a]/50 to-transparent"></div>
 
-      <!-- PRICING -->
-      <section id="pricing" class="py-20 px-4">
-        <div class="max-w-5xl mx-auto">
+        <div class="max-w-6xl mx-auto relative z-10">
           <div class="text-center mb-12">
-            <h2 class="text-4xl font-bold mb-4">Invista no seu sucesso</h2>
-            <p class="text-gray-400 text-lg mb-4">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+              Invista na sua evolução profissional
+            </h2>
+            <p class="text-gray-400 text-lg mb-8">
               Escolha o plano ideal para sua jornada
             </p>
 
-            <div
-              class="inline-flex items-center bg-[#1b2330] rounded-lg p-1"
-              role="tablist"
-              aria-label="Alternar cobrança"
-            >
+            <!-- Billing Toggle with Animation -->
+            <div class="inline-flex items-center bg-[#1b2330]/80 backdrop-blur rounded-xl p-1.5">
               <button
                 (click)="setBilling('monthly')"
-                class="px-4 py-2 rounded-lg transition"
-                [ngClass]="
-                  billingCycle === 'monthly'
-                    ? 'bg-[#22d3ee] text-black'
-                    : 'text-gray-400'
-                "
-                role="tab"
-                [attr.aria-selected]="billingCycle === 'monthly'"
+                class="relative px-6 py-3 rounded-lg font-medium transition-all duration-300"
+                [ngClass]="billingCycle === 'monthly' ? 'text-black' : 'text-gray-400'"
               >
-                Mensal
+                <span class="relative z-10">Mensal</span>
+                <div
+                  *ngIf="billingCycle === 'monthly'"
+                  class="absolute inset-0 bg-gradient-to-r from-[#22d3ee] to-[#10b981] rounded-lg"
+                ></div>
               </button>
               <button
                 (click)="setBilling('yearly')"
-                class="px-4 py-2 rounded-lg transition"
-                [ngClass]="
-                  billingCycle === 'yearly'
-                    ? 'bg-[#22d3ee] text-black'
-                    : 'text-gray-400'
-                "
-                role="tab"
-                [attr.aria-selected]="billingCycle === 'yearly'"
+                class="relative px-6 py-3 rounded-lg font-medium transition-all duration-300"
+                [ngClass]="billingCycle === 'yearly' ? 'text-black' : 'text-gray-400'"
               >
-                Anual (-20%)
-              </button>
-            </div>
-          </div>
-
-          <div class="grid md:grid-cols-3 gap-8">
-            <!-- Basic -->
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 flex flex-col"
-            >
-              <h3 class="text-2xl font-bold mb-2">Basic</h3>
-              <p class="text-gray-400 mb-4">Para começar</p>
-              <div class="mb-6">
-                <span class="text-4xl font-bold">Grátis</span>
-              </div>
-              <ul class="space-y-3 mb-8 text-sm flex-1">
-                <li class="flex items-center">
-                  <span class="text-[#10b981] mr-3">✔</span> 100 trades
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#10b981] mr-3">✔</span> Dashboard básico
-                </li>
-                 <li class="flex items-center mr-3">
-                  <span class="mr-3">✔</span> TraderQuest até nivel Plus
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#10b981] mr-3">✔</span> 1 conta de trading
-                </li>
-                <li class="flex items-center text-gray-500">
-                  <span class="mr-3">✖</span> Sem análise IA
-                </li>
-                 <li class="flex items-center text-gray-500">
-                  <span class="mr-3">✖</span> Sem Ferramenta de Parciais
-                </li>
-                 <li class="flex items-center text-gray-500">
-                  <span class="mr-3">✖</span> Sem Ferramenta de Gerenciamento de Risco
-                </li>
-
-              </ul>
-              <button
-                (click)="go('/register')"
-                class="w-full py-3 bg-[#1b2330] rounded-lg font-medium hover:bg-[#2a3441] transition"
-              >
-                Começar Grátis
-              </button>
-            </div>
-
-            <!-- Premium -->
-            <div
-              class="bg-[#0f131a]/90 border-2 border-[#f59e0b] rounded-xl p-6 relative transform md:scale-105 flex flex-col"
-            >
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span class="relative z-10">Anual</span>
                 <span
-                  class="bg-gradient-to-r from-[#f59e0b] to-yellow-400 text-black text-sm px-4 py-1 rounded-full font-bold"
-                  >MAIS POPULAR</span
+                  *ngIf="billingCycle === 'yearly'"
+                  class="absolute -top-3 -right-2 bg-[#10b981] text-black text-xs px-2 py-0.5 rounded-full font-bold animate-pulse"
                 >
-              </div>
-              <h3 class="text-2xl font-bold mb-2">Premium</h3>
-              <p class="text-gray-400 mb-4">Para traders sérios</p>
-              <div class="mb-6">
-                <span class="text-4xl font-bold"
-                  >€{{ pricePremium().toFixed(2) }}</span
-                >
-                <span class="text-gray-400">/mês</span>
+                  -20%
+                </span>
                 <div
-                  *ngIf="subtitlePremium()"
-                  class="text-sm text-[#10b981] mt-1"
-                >
-                  {{ subtitlePremium() }}
-                </div>
-              </div>
-              <ul class="space-y-3 mb-8 text-sm flex-1">
-                <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> Trades ilimitados
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> Análise IA (10
-                  créditos/mês)
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> 5 contas de trading
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> TraderQuest
-                  completo
-                </li>
-                 <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> Todas as Ferramentas
-                </li>
-                <li class="flex items-center">
-                  <span class="text-[#f59e0b] mr-3">★</span> Compartilhar com
-                  mentor
-                </li>
-              </ul>
-              <button
-                (click)="
-                  handleCheckout(
-                    billingCycle === 'yearly'
-                      ? 'premium_yearly'
-                      : 'premium_monthly'
-                  )
-                "
-                class="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-yellow-400 text-black rounded-lg font-bold hover:shadow-lg hover:shadow-[#f59e0b]/25 transition-all transform hover:scale-105"
-              >
-                Teste Grátis 7 Dias
-              </button>
-              <p class="text-xs text-center text-gray-400 mt-2">
-                Cancele quando quiser
-              </p>
-            </div>
-
-            <!-- Pro -->
-            <div
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6 flex flex-col"
-            >
-              <h3 class="text-2xl font-bold mb-2">Pro</h3>
-              <p class="text-gray-400 mb-4">Para prop firms</p>
-              <div class="mb-6">
-                <span class="text-4xl font-bold">€29.99</span
-                ><span class="text-gray-400">/mês</span>
-              </div>
-              <ul class="space-y-3 mb-8 text-sm flex-1">
-                <li *ngFor="let t of proFeatures" class="flex items-center">
-                  <span
-                    class="w-5 h-5 bg-[#8b5cf6] rounded text-white text-xs flex items-center justify-center mr-3"
-                    >♦</span
-                  >
-                  {{ t }}
-                </li>
-              </ul>
-              <button
-                (click)="handleCheckout('pro_monthly')"
-                class="w-full py-3 bg-[#8b5cf6] text-white rounded-lg font-medium hover:bg-[#7c3aed] transition"
-              >
-                Começar Pro
-              </button>
-            </div>
-
-          </div>
-                  <p class="text-xs text-gray-500 mt-10">
-  Nenhuma estratégia garante resultados. Não fornecemos calls/sinais. Trading envolve risco.
-</p>
-          <!-- Comparação -->
-          <div id="compare" class="mt-12 overflow-x-auto">
-            <table
-              class="min-w-full text-sm border border-[#1b2330] rounded-xl overflow-hidden"
-            >
-              <thead class="bg-[#0f131a]">
-                <tr>
-                  <th class="p-3 text-left">Recurso</th>
-                  <th class="p-3 text-center">Basic</th>
-                  <th class="p-3 text-center">Premium</th>
-                  <th class="p-3 text-center">Pro</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[#1b2330]">
-                <tr
-                  *ngFor="let row of comparisonRows"
-                  class="hover:bg-white/[0.02]"
-                >
-                  <td class="p-3 text-gray-300">{{ row.name }}</td>
-                  <td class="p-3 text-center">{{ row.values[0] }}</td>
-                  <td class="p-3 text-center">{{ row.values[1] }}</td>
-                  <td class="p-3 text-center">{{ row.values[2] }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-
-      <!-- TESTIMONIALS -->
-      <section id="testimonials" class="py-20 px-4 bg-[#0f131a]/50">
-        <div class="max-w-6xl mx-auto">
-          <h2 class="text-4xl font-bold text-center mb-12">
-            Traders de sucesso com TradingNoteX
-          </h2>
-
-          <div class="grid md:grid-cols-3 gap-6">
-            <div
-              *ngFor="let t of testimonials"
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl p-6"
-            >
-              <div class="flex items-center mb-4">
-                <div
-                  class="w-12 h-12 rounded-full mr-3"
-                  [ngClass]="t.avatar"
+                  *ngIf="billingCycle === 'yearly'"
+                  class="absolute inset-0 bg-gradient-to-r from-[#22d3ee] to-[#10b981] rounded-lg"
                 ></div>
-                <div>
-                  <div class="font-bold">{{ t.name }}</div>
-                  <div class="text-sm text-gray-400">{{ t.role }}</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-8 items-stretch">
+            <!-- Basic Plan -->
+            <div class="relative group">
+              <div class="h-full bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8 flex flex-col hover:border-[#22d3ee]/30 transition-all duration-300">
+                <div class="mb-6">
+                  <h3 class="text-2xl font-bold mb-2">Basic</h3>
+                  <p class="text-gray-400">Comece sua jornada</p>
                 </div>
+
+                <div class="mb-8">
+                  <div class="flex items-baseline">
+                    <span class="text-5xl font-bold">€0</span>
+                    <span class="text-gray-400 ml-2">/sempre</span>
+                  </div>
+                </div>
+
+                <ul class="space-y-4 mb-8 flex-1">
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>100 trades por mês</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Métricas básicas</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>1 conta de trading</span>
+                  </li>
+                  <li class="flex items-start gap-3 opacity-50">
+                    <svg class="w-5 h-5 text-gray-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Sem análise avançada</span>
+                  </li>
+                </ul>
+
+                <button
+                  (click)="go('/register')"
+                  class="w-full py-3 bg-[#1b2330] rounded-xl font-semibold hover:bg-[#2a3441] transition-all duration-300"
+                >
+                  Começar Grátis
+                </button>
               </div>
-              <div class="flex gap-1 mb-3" aria-label="5 estrelas">
-                <span *ngFor="let _ of five" class="text-[#f59e0b]">★</span>
+            </div>
+
+            <!-- Premium Plan - Featured -->
+            <div class="relative group transform md:scale-105">
+              <div class="absolute -inset-1 bg-gradient-to-r from-[#22d3ee] via-[#10b981] to-[#f59e0b] rounded-2xl opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
+              <div class="relative h-full bg-[#0f131a] rounded-2xl p-8 flex flex-col">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span class="bg-gradient-to-r from-[#f59e0b] to-[#22d3ee] text-black text-sm px-4 py-1.5 rounded-full font-bold">
+                    RECOMENDADO
+                  </span>
+                </div>
+
+                <div class="mb-6 mt-2">
+                  <h3 class="text-2xl font-bold mb-2">Premium</h3>
+                  <p class="text-gray-400">Para traders sérios</p>
+                </div>
+
+                <div class="mb-8">
+                  <div class="flex items-baseline">
+                    <span class="text-5xl font-bold text-transparent bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] bg-clip-text">
+                      €{{ pricePremium() }}
+                    </span>
+                    <span class="text-gray-400 ml-2">/mês</span>
+                  </div>
+                  <div *ngIf="billingCycle === 'yearly'" class="text-sm text-[#10b981] mt-1">
+                    Economize €24/ano
+                  </div>
+                </div>
+
+                <ul class="space-y-4 mb-8 flex-1">
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#f59e0b] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-medium">Trades ilimitados</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#f59e0b] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-medium">Análise de padrões com IA</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#f59e0b] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-medium">5 contas de trading</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#f59e0b] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-medium">Sistema de evolução gamificado</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#f59e0b] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-medium">Métricas profissionais completas</span>
+                  </li>
+                </ul>
+
+                <button
+                  (click)="handleCheckout(billingCycle === 'yearly' ? 'premium_yearly' : 'premium_monthly')"
+                  class="w-full py-4 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] text-black rounded-xl font-bold text-lg hover:shadow-xl hover:shadow-[#22d3ee]/30 transform hover:scale-105 transition-all duration-300"
+                >
+                  Começar Jornada Pro →
+                </button>
+                <p class="text-xs text-center text-gray-400 mt-3">
+                  7 dias grátis • Cancele quando quiser
+                </p>
               </div>
-              <p class="text-gray-300">“{{ t.quote }}”</p>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="relative group">
+              <div class="h-full bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-8 flex flex-col hover:border-[#8b5cf6]/30 transition-all duration-300">
+                <div class="mb-6">
+                  <h3 class="text-2xl font-bold mb-2">Pro</h3>
+                  <p class="text-gray-400">Para institucionais</p>
+                </div>
+
+                <div class="mb-8">
+                  <div class="flex items-baseline">
+                    <span class="text-5xl font-bold">€29</span>
+                    <span class="text-gray-400 ml-2">/mês</span>
+                  </div>
+                </div>
+
+                <ul class="space-y-4 mb-8 flex-1">
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] rounded flex items-center justify-center shrink-0 mt-0.5">
+                      <span class="text-white text-xs">♦</span>
+                    </div>
+                    <span>Tudo do Premium</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] rounded flex items-center justify-center shrink-0 mt-0.5">
+                      <span class="text-white text-xs">♦</span>
+                    </div>
+                    <span>Análise ilimitada com IA</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] rounded flex items-center justify-center shrink-0 mt-0.5">
+                      <span class="text-white text-xs">♦</span>
+                    </div>
+                    <span>Contas ilimitadas</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] rounded flex items-center justify-center shrink-0 mt-0.5">
+                      <span class="text-white text-xs">♦</span>
+                    </div>
+                    <span>API access</span>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] rounded flex items-center justify-center shrink-0 mt-0.5">
+                      <span class="text-white text-xs">♦</span>
+                    </div>
+                    <span>Mentoria e suporte prioritário</span>
+                  </li>
+                </ul>
+
+                <button
+                  (click)="handleCheckout('pro_monthly')"
+                  class="w-full py-3 bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] text-white rounded-xl font-semibold hover:shadow-xl hover:shadow-[#8b5cf6]/30 transform hover:scale-105 transition-all duration-300"
+                >
+                  Fale Conosco
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- FAQ -->
+      <!-- TESTIMONIALS Carousel -->
+      <section id="testimonials" class="py-20 px-4 overflow-hidden">
+        <div class="max-w-7xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+              Histórias de transformação real
+            </h2>
+            <p class="text-gray-400 text-lg">
+              Como nossos usuários conquistaram disciplina e consistência
+            </p>
+          </div>
+
+          <!-- Testimonials Carousel Container -->
+          <div class="relative">
+            <div class="flex gap-6 animate-scroll">
+              <div
+               *ngFor="let testimonial of testimonialsLoop"
+                class="min-w-[350px] bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-2xl p-6 hover:border-[#22d3ee]/30 transition-all duration-300"
+              >
+                <div class="flex items-center mb-4">
+                  <div class="w-12 h-12 rounded-full {{ testimonial.gradient }} flex items-center justify-center text-white font-bold text-lg">
+                    {{ testimonial.initials }}
+                  </div>
+                  <div class="ml-3">
+                    <div class="font-semibold">{{ testimonial.name }}</div>
+                    <div class="text-sm text-gray-400">{{ testimonial.role }}</div>
+                  </div>
+                  <div class="ml-auto flex gap-0.5">
+                    <span *ngFor="let _ of [1,2,3,4,5]" class="text-[#f59e0b]">★</span>
+                  </div>
+                </div>
+                <p class="text-gray-300 italic">"{{ testimonial.quote }}"</p>
+                <div class="mt-4 pt-4 border-t border-[#1b2330]">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-400">Melhoria</span>
+                    <span class="text-[#10b981] font-semibold">{{ testimonial.improvement }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Enhanced -->
       <section class="py-20 px-4">
         <div class="max-w-3xl mx-auto">
-          <h2 class="text-4xl font-bold text-center mb-12">
-            Perguntas Frequentes
-          </h2>
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">
+              Perguntas frequentes
+            </h2>
+            <p class="text-gray-400 text-lg">
+              Tire suas dúvidas sobre a plataforma
+            </p>
+          </div>
 
           <div class="space-y-4">
             <div
               *ngFor="let faq of faqs; let i = index"
-              class="bg-[#0f131a]/90 border border-[#1b2330] rounded-xl overflow-hidden"
+              class="bg-[#0f131a]/80 backdrop-blur border border-[#1b2330] rounded-xl overflow-hidden hover:border-[#22d3ee]/30 transition-all duration-300"
             >
               <button
                 (click)="toggleFaq(i)"
-                class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-[#1b2330]/50 transition"
-                [attr.aria-expanded]="activeFaq === i"
+                class="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-[#1b2330]/30 transition-colors"
               >
-                <span class="font-semibold">{{ faq.q }}</span>
+                <span class="font-semibold pr-4">{{ faq.q }}</span>
                 <svg
-                  class="w-5 h-5 transition-transform"
+                  class="w-5 h-5 shrink-0 transition-transform duration-300"
                   [ngClass]="activeFaq === i ? 'rotate-180' : ''"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
                   viewBox="0 0 24 24"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19 9l-7 7-7-7"
-                  />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
-              <div *ngIf="activeFaq === i" class="px-6 pb-4 text-gray-400">
+              <div
+                *ngIf="activeFaq === i"
+                class="px-6 pb-5 text-gray-400 animate-fadeIn"
+              >
                 {{ faq.a }}
               </div>
             </div>
@@ -679,74 +977,63 @@ type BillingCycle = 'monthly' | 'yearly';
         </div>
       </section>
 
-      <!-- FINAL CTA -->
-      <section
-        class="py-20 px-4 bg-gradient-to-r from-[#22d3ee]/10 to-[#f59e0b]/10"
-      >
-        <div class="max-w-4xl mx-auto text-center">
-          <h2 class="text-4xl font-bold mb-4">
-            Pronto para levar seu trading ao próximo nível?
+      <!-- FINAL CTA with Urgency -->
+      <section class="py-20 px-4 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-[#22d3ee]/20 via-[#10b981]/20 to-[#f59e0b]/20"></div>
+
+        <div class="max-w-4xl mx-auto text-center relative z-10">
+          <div class="inline-block px-4 py-2 bg-[#10b981]/20 text-[#10b981] rounded-full text-sm font-semibold mb-6">
+            🎯 Compromisso com sua evolução profissional
+          </div>
+
+          <h2 class="text-3xl md:text-5xl font-bold mb-6">
+            Pronto para se tornar um <span class="text-transparent bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] bg-clip-text">trader disciplinado?</span>
           </h2>
+
           <p class="text-xl text-gray-400 mb-8">
-            Junte-se a centenas de traders que já transformaram seus resultados
+            Junte-se a <span class="font-bold text-white">{{ onlineUsers }}</span> traders que já estão transformando sua jornada
           </p>
 
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <button
               (click)="handleCheckout('premium_monthly')"
-              class="px-8 py-4 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-lg font-bold text-lg hover:shadow-xl hover:shadow-[#22d3ee]/25 transform hover:scale-105 transition-all"
+              class="group px-8 py-4 bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] rounded-xl font-bold text-lg transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-[#22d3ee]/30"
             >
-              Começar Teste Grátis Agora
+              <span class="flex items-center justify-center gap-2">
+                Começar Transformação
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+              </span>
             </button>
+
             <button
               (click)="scrollToSection('pricing')"
-              class="px-8 py-4 bg-[#1b2330] border border-[#2a3441] rounded-lg font-bold text-lg hover:bg-[#2a3441] transition-all"
+              class="px-8 py-4 bg-[#1b2330]/80 backdrop-blur border border-[#2a3441] rounded-xl font-bold text-lg hover:bg-[#2a3441]/80 transition-all duration-300"
             >
-              Ver Planos
+              Ver Todos os Planos
             </button>
           </div>
 
-          <div class="mt-8 flex items-center justify-center gap-8">
+          <!-- Trust Badges -->
+          <div class="flex flex-wrap items-center justify-center gap-8 text-sm">
             <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 text-[#10b981]"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                />
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span class="text-sm text-gray-400">Pagamento Seguro</span>
+              <span class="text-gray-400">Plataforma Educacional</span>
             </div>
             <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 text-[#10b981]"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M19 21v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2"
-                />
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
               </svg>
-              <span class="text-sm text-gray-400">Garantia 30 dias</span>
+              <span class="text-gray-400">Comunidade Ativa</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-[#f59e0b]">★</span>
-              <span class="text-sm text-gray-400">4.9/5 Avaliação</span>
+              <svg class="w-5 h-5 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-400">Suporte Dedicado</span>
             </div>
           </div>
         </div>
@@ -755,401 +1042,454 @@ type BillingCycle = 'monthly' | 'yearly';
       <!-- FOOTER -->
       <footer class="py-12 px-4 border-t border-[#1b2330]">
         <div class="max-w-7xl mx-auto">
-          <div class="grid md:grid-cols-4 gap-8">
-            <div>
-              <span
-                class="text-xl font-bold bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] bg-clip-text text-transparent"
-              >
-                TradingNoteX
-              </span>
-              <p class="text-gray-400 text-sm mt-2">
-                Sistema profissional de análise de trades com IA
+          <div class="grid md:grid-cols-5 gap-8">
+            <!-- Brand -->
+            <div class="md:col-span-2">
+              <div class="flex items-center gap-2 mb-4">
+                <span class="text-2xl font-bold bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] bg-clip-text text-transparent">
+                  TradingNoteX
+                </span>
+              </div>
+              <p class="text-gray-400 text-sm mb-4">
+                Transformando traders através de disciplina, análise e desenvolvimento profissional contínuo.
               </p>
-              <div class="mt-4 text-xs text-gray-500 flex items-center gap-2">
-                <!-- cartão -->
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
-                  <path d="M2 10h20" />
-                </svg>
-                Pagamentos por LemonSqueezy
+              <div class="flex gap-4">
+                <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                  </svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
+                  </svg>
+                </a>
               </div>
             </div>
 
+            <!-- Links -->
             <div>
-              <h4 class="font-semibold mb-3">Produto</h4>
+              <h4 class="font-semibold mb-4">Produto</h4>
               <ul class="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button
-                    (click)="scrollToSection('features')"
-                    class="hover:text-white transition"
-                  >
-                    Recursos
-                  </button>
-                </li>
-                <li>
-                  <button
-                    (click)="scrollToSection('pricing')"
-                    class="hover:text-white transition"
-                  >
-                    Preços
-                  </button>
-                </li>
-                <li>
-                  <a href="/login" class="hover:text-white transition">Login</a>
-                </li>
+                <li><a href="#" class="hover:text-white transition-colors">Recursos</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Preços</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Metodologia</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Changelog</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 class="font-semibold mb-3">Suporte</h4>
+              <h4 class="font-semibold mb-4">Educação</h4>
               <ul class="space-y-2 text-sm text-gray-400">
-                <li>
-                  <a href="#" class="hover:text-white transition"
-                    >Central de Ajuda</a
-                  >
-                </li>
-                <li>
-                  <a href="#" class="hover:text-white transition">Contato</a>
-                </li>
-                <li>
-                  <a href="#" class="hover:text-white transition">Status</a>
-                </li>
+                <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Guias</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Webinars</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Comunidade</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 class="font-semibold mb-3">Legal</h4>
+              <h4 class="font-semibold mb-4">Legal</h4>
               <ul class="space-y-2 text-sm text-gray-400">
-                <li>
-                  <a href="#" class="hover:text-white transition"
-                    >Termos de Uso</a
-                  >
-                </li>
-                <li>
-                  <a href="#" class="hover:text-white transition"
-                    >Privacidade</a
-                  >
-                </li>
-                <li>
-                  <a href="#" class="hover:text-white transition">Cookies</a>
-                </li>
-                <li>
-  <button (click)="riskOpen = true" class="hover:text-white transition">
-    Divulgação de Risco
-  </button>
-</li>
+                <li><a href="#" class="hover:text-white transition-colors">Termos</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Privacidade</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Cookies</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Aviso Legal</a></li>
               </ul>
             </div>
           </div>
 
-          <div
-            class="mt-8 pt-8 border-t border-[#1b2330] text-center text-sm text-gray-400"
-          >
-            © 2025 TradingNoteX. Todos os direitos reservados.
+          <div class="mt-12 pt-8 border-t border-[#1b2330] flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-sm text-gray-400">
+              © 2025 TradingNoteX. Todos os direitos reservados. Ferramenta educacional - não oferecemos sinais ou promessas de lucro.
+            </p>
+            <div class="flex items-center gap-6 text-sm text-gray-400">
+              <span>Processamento LemonSqueezy</span>
+              <span>•</span>
+              <span>SSL Seguro</span>
+            </div>
           </div>
         </div>
       </footer>
 
-      <!-- CTA Mobile -->
-      <div class="fixed bottom-4 left-1/2 -translate-x-1/2 md:hidden z-40">
-        <button
-          (click)="handleCheckout('premium_monthly')"
-          class="px-6 py-3 rounded-full bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] text-black font-semibold shadow-lg"
-        >
-          Começar Grátis
-        </button>
+      <!-- Mobile Bottom Navigation -->
+      <div class="md:hidden fixed bottom-0 inset-x-0 bg-[#0f131a]/95 backdrop-blur-xl border-t border-[#1b2330] z-40">
+        <div class="grid grid-cols-4 py-2">
+          <button (click)="scrollToSection('top')" class="flex flex-col items-center py-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            <span class="text-xs mt-1">Início</span>
+          </button>
+          <button (click)="scrollToSection('features')" class="flex flex-col items-center py-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span class="text-xs mt-1">Recursos</span>
+          </button>
+          <button (click)="scrollToSection('pricing')" class="flex flex-col items-center py-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-xs mt-1">Preços</span>
+          </button>
+          <button (click)="handleCheckout('premium_monthly')" class="flex flex-col items-center py-2 text-[#22d3ee]">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-xs mt-1">Começar</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Scroll to Top -->
+      <!-- Scroll Progress Indicator -->
+      <div class="fixed top-0 left-0 w-full h-1 bg-[#1b2330] z-[60]">
+        <div
+          class="h-full bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] transition-all duration-300"
+          [style.width.%]="scrollProgress"
+        ></div>
+      </div>
+
+      <!-- Floating Action Button -->
       <button
         *ngIf="showScrollTop"
         (click)="scrollTop()"
-        class="fixed bottom-6 right-6 p-3 rounded-full bg-[#1b2330] border border-[#2a3441] hover:bg-[#2a3441] transition"
-        aria-label="Voltar ao topo"
+        class="fixed bottom-20 md:bottom-6 right-6 p-3 bg-gradient-to-r from-[#22d3ee] to-[#10b981] rounded-full shadow-xl hover:shadow-2xl hover:shadow-[#22d3ee]/30 transform hover:scale-110 transition-all duration-300 z-40"
       >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M5 15l7-7 7 7"
-          />
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
         </svg>
       </button>
-
-      <!-- Cookie Bar -->
-      <div *ngIf="showCookieBar" class="fixed bottom-0 inset-x-0 z-50">
-        <div
-          class="mx-auto max-w-5xl m-4 p-4 rounded-xl border border-[#1b2330] bg-[#0f131a]/95 backdrop-blur"
-        >
-          <div
-            class="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between"
-          >
-            <div class="text-sm text-gray-300 flex-1">
-              Usamos cookies para melhorar sua experiência e analisar o uso do
-              site. Ao continuar, você concorda com nossa
-              <a href="#" class="underline">Política de Cookies</a>.
-            </div>
-            <div class="flex gap-2">
-              <button
-                (click)="acceptCookies()"
-                class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#22d3ee] to-[#f59e0b] text-black font-medium"
-              >
-                Aceitar
-              </button>
-              <a
-                href="#"
-                class="px-4 py-2 rounded-lg border border-[#2a3441] hover:bg-[#2a3441]"
-                >Preferências</a
-              >
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-    <!-- RISK DISCLOSURE MODAL -->
-<div *ngIf="riskOpen" class="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" (click)="riskOpen = false">
-  <div class="bg-[#0f131a] border border-[#1b2330] rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto" (click)="$event.stopPropagation()">
-    <div class="flex items-center justify-between px-5 py-3 border-b border-[#1b2330]">
-      <h3 class="font-semibold">Divulgação de Risco</h3>
-      <button (click)="riskOpen = false" class="text-gray-400 hover:text-white" aria-label="Fechar">
-        ✕
-      </button>
-    </div>
-
-    <div class="p-5 space-y-6 text-sm leading-relaxed text-gray-300">
-      <!-- PT -->
-      <section>
-        <h4 class="font-semibold mb-2">🚨 Avisos de Risco</h4>
-        <p>
-          Operações com <strong>futuros e forex</strong> envolvem risco substancial e não são adequadas para todos os investidores.
-          É possível perder <strong>todo o capital</strong> ou mais do que o investimento inicial. Utilize apenas
-          <strong>capital de risco</strong> – dinheiro que você pode perder sem comprometer sua segurança financeira
-          ou estilo de vida. <strong>Resultados passados não garantem resultados futuros.</strong>
-        </p>
-      </section>
-
-      <section>
-        <h4 class="font-semibold mb-2">📌 Natureza do Conteúdo</h4>
-        <p>
-          O TradingNoteX <strong>não fornece calls, sinais, recomendações de compra/venda, nem consultoria de investimentos</strong>.
-          Todo o conteúdo tem <strong>finalidade educacional</strong> e informativa. As decisões de negociação são de
-          <strong>responsabilidade exclusiva do usuário</strong>.
-        </p>
-      </section>
-
-      <section>
-        <h4 class="font-semibold mb-2">📊 Divulgação de Desempenho Hipotético</h4>
-        <p>
-          Resultados hipotéticos possuem limitações inerentes. Não há garantia de que qualquer conta atingirá
-          lucros ou perdas semelhantes aos exibidos. Simulações <strong>não</strong> envolvem risco financeiro real e
-          <strong>não</strong> capturam plenamente fatores emocionais/psicológicos do trading real. Condições de mercado,
-          liquidez e atrasos de execução podem afetar adversamente os resultados.
-        </p>
-      </section>
-
-      <hr class="border-[#1b2330]">
-
-      <!-- EN -->
-      <section>
-        <h4 class="font-semibold mb-2">⚠️ Risk Disclosure (EN)</h4>
-        <p>
-          Futures and forex trading involve substantial risk and are not suitable for every investor. An investor could
-          potentially lose all or more than their initial investment. Only risk capital should be used for trading.
-          Past performance is not necessarily indicative of future results.
-        </p>
-        <p class="mt-3">
-          <strong>Content is educational only:</strong> TradingNoteX does not provide trade calls, signals, investment
-          recommendations, or financial advice. All trading decisions are solely your responsibility.
-        </p>
-      </section>
-
-      <section>
-        <h4 class="font-semibold mb-2">📊 Hypothetical Performance Disclosure (EN)</h4>
-        <p>
-          Hypothetical performance results have many inherent limitations. No representation is being made that any
-          account will or is likely to achieve profits or losses similar to those shown. Hypothetical trading does not
-          involve financial risk and cannot fully reflect emotional and psychological factors of real trading. Market
-          conditions, liquidity, and execution delays may adversely affect results.
-        </p>
-      </section>
-
-      <div class="pt-2">
-        <em class="text-gray-400">Trade responsibly.</em>
-      </div>
-    </div>
-  </div>
-</div>
   `,
-  styles: [
-    `
-      /* estilos mínimos extra; restante via Tailwind */
-      :host {
-        display: block;
-      }
-    `,
-  ],
+  styles: [`
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    @keyframes float-delayed {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-30px); }
+    }
+    @keyframes spin-slow {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    @keyframes draw-line { to { stroke-dashoffset: 0; } }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(calc(-350px * 6)); }
+    }
+
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-float-delayed { animation: float-delayed 8s ease-in-out infinite; }
+    .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradient 3s ease infinite;
+    }
+    .animate-draw-line {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: draw-line 2s ease forwards;
+    }
+    .animate-fadeIn { animation: fadeIn 0.3s ease; }
+    .animate-scroll { animation: scroll 30s linear infinite; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f131a; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(to bottom, #22d3ee, #f59e0b);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
+
+    /* Range input styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-track {
+      background: linear-gradient(to right, #22d3ee, #10b981, #f59e0b);
+      height: 4px;
+      border-radius: 2px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      background: white;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      border: 2px solid #22d3ee;
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+      margin-top: -8px; /* centraliza no trilho */
+    }
+
+    /* Firefox */
+    input[type="range"]::-moz-range-track {
+      background: linear-gradient(to right, #22d3ee, #10b981, #f59e0b);
+      height: 4px;
+      border-radius: 2px;
+    }
+    input[type="range"]::-moz-range-thumb {
+      background: white;
+      height: 20px;
+      width: 20px;
+      border: 2px solid #22d3ee;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+    }
+  `]
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit, OnDestroy {
+
+  // ✅ Disponibiliza Math para o template ({{ Math.floor(...) }})
+  public Math = Math;
+public activeFaq: number | null = null;
+  // --- SEU ESTADO EXISTENTE (mantenha o que você já tinha) ---
   isScrolled = false;
   mobileMenuOpen = false;
-  billingCycle: BillingCycle = 'monthly';
-  activeFaq: number | null = null;
-  showCookieBar = false;
+  scrollProgress = 0;
   showScrollTop = false;
-  videoOpen = false;
-  riskOpen = false;
 
-  brands = ['NinjaTrader', 'TradingView', 'MetaTrader', 'Interactive Brokers'];
+  currentHeadlineIndex = 0;
+  private headlineIntervalId?: any;
 
-  quickFeatures = [
-    { emoji: '📊', label: 'Dashboard Avançado' },
-    { emoji: '📈', label: 'Gráficos Interativos' },
-    { emoji: '💼', label: 'Multi-contas' },
-    { emoji: '👥', label: 'Compartilhar Mentor' },
+  currentScreenIndex = 0;
+  private screenIntervalId?: any;
+
+  chartPoints = '';
+
+  animatedStats = { trades: 0, discipline: 0, users: 0, rating: 0 };
+  private statsTargets = { trades: 12, discipline: 32, users: 800, rating: 4.9 };
+  private statsAnimId?: number;
+
+  onlineUsers = 127;
+  billingCycle: BillingCycle = 'monthly';
+
+  menuItems = [
+    { id: 'features', label: 'Recursos' },
+    { id: 'pricing', label: 'Preços' },
+    { id: 'testimonials', label: 'Depoimentos' }
   ];
 
-  proFeatures = [
-    'Tudo do Premium',
-    '50 créditos IA/mês',
-    'Contas ilimitadas',
-    'Suporte prioritário',
+  public faqs = [
+  {
+    q: 'Vocês oferecem sinais?',
+    a: 'Não. O TradingNoteX é uma ferramenta educacional focada em análise e disciplina, sem sinais ou promessas de lucro.'
+  },
+  {
+    q: 'Preciso de cartão para o teste?',
+    a: 'Não. Você pode testar 7 dias sem cartão e cancelar quando quiser.'
+  },
+  {
+    q: 'A análise com IA é ilimitada?',
+    a: 'No plano Premium há limites generosos; no Pro é ilimitada.'
+  },
+  {
+    q: 'Posso integrar várias contas?',
+    a: 'Sim. Premium suporta até 5 contas; Pro é ilimitado.'
+  },
+];
+
+  appScreens = [
+    { url: 'assets/screens/screen1.jpg', title: 'Dashboard de Insights', description: 'Visualize desempenho e padrões de operação.' },
+    { url: 'assets/screens/screen2.jpg', title: 'Registro Detalhado', description: 'Documente contexto, emoções e justificativas.' },
+    { url: 'assets/screens/screen3.jpg', title: 'Métricas Profissionais', description: 'KPIs claros para evolução constante.' },
   ];
 
-  comparisonRows = [
-    { name: 'Trades por mês', values: ['100', 'Ilimitados', 'Ilimitados'] },
-    { name: 'Contas de trading', values: ['1', '5', 'Ilimitadas'] },
-    { name: 'Análises com IA', values: ['—', '10/mês', '50/mês'] },
-    { name: 'TraderQuest', values: ['—', 'Completo', 'Completo'] },
-    { name: 'Acesso API', values: ['—', '—', 'Sim'] },
-    {
-      name: 'Suporte',
-      values: ['Email', 'Chat prioritário', 'Prioritário + SLA'],
-    },
-  ];
+  evolutionTracker = {
+    experience: 6,
+    currentTracking: 'sometimes' as 'none' | 'sometimes' | 'basic' | 'detailed',
+    challenges: { discipline: true, emotional: false, consistency: true, analysis: false },
+    improvements: { discipline: 0, emotional: 0, patterns: 0 },
+    timeToProf: 0
+  };
 
   testimonials = [
-    {
-      name: 'João Silva',
-      role: 'Trader há 3 anos',
-      quote:
-        'A análise com IA me ajudou a identificar padrões que eu nunca tinha percebido. Meu win rate subiu de 45% para 68% em 3 meses!',
-      avatar: 'bg-gradient-to-r from-[#22d3ee] to-[#f59e0b]',
-    },
-    {
-      name: 'Maria Costa',
-      role: 'Prop Trader',
-      quote:
-        'O sistema de gestão de risco salvou minha conta várias vezes. Agora consigo manter consistência mesmo em mercados voláteis.',
-      avatar: 'bg-gradient-to-r from-[#10b981] to-[#22d3ee]',
-    },
-    {
-      name: 'Pedro Mendes',
-      role: 'Day Trader',
-      quote:
-        'TraderQuest tornou o trading mais divertido e me mantém disciplinado. É viciante ver meu nível subindo!',
-      avatar: 'bg-gradient-to-r from-[#8b5cf6] to-[#ec4899]',
-    },
+    { name: 'Marcos A.', initials: 'MA', role: 'Swing Trader', quote: 'Passei a respeitar meu plano e reduzir overtrading.', improvement: '+28% disciplina', gradient: 'bg-gradient-to-r from-[#22d3ee] to-[#10b981]' },
+    { name: 'Bianca R.', initials: 'BR', role: 'Day Trader', quote: 'Entendi meus gatilhos emocionais e cortei erros repetidos.', improvement: '+19% consistência', gradient: 'bg-gradient-to-r from-[#10b981] to-[#3b82f6]' },
+    { name: 'Edu S.', initials: 'ES', role: 'Futuros', quote: 'Minhas notas viraram uma base sólida para evolução.', improvement: '+34% padrões', gradient: 'bg-gradient-to-r from-[#f59e0b] to-[#d97706]' },
   ];
+  testimonialsLoop = [...this.testimonials, ...this.testimonials];
 
-  faqs = [
+  // ✅ ADIÇÃO 1: mainFeatures para o *ngFor do grid de features
+  mainFeatures = [
     {
-      q: 'Como funciona o período de teste grátis?',
-      a: 'Você tem 7 dias completos para testar todos os recursos Premium sem custo. Não pedimos cartão de crédito e você pode cancelar a qualquer momento.',
+      gradient: 'bg-gradient-to-r from-[#22d3ee] to-[#3b82f6]',
+      icon: `<svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18M3 12h12M3 17h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+      title: 'Registro Estruturado',
+      description: 'Anote contexto, setup, emoções e gestão de risco.',
+      items: [
+        'Templates de trade e tags',
+        'Upload de imagens',
+        'Notas rápidas e avançadas'
+      ]
     },
     {
-      q: 'Posso cancelar minha assinatura?',
-      a: 'Sim! Você pode cancelar a qualquer momento diretamente no seu painel. Você manterá o acesso até o fim do período pago.',
+      gradient: 'bg-gradient-to-r from-[#10b981] to-[#059669]',
+      icon: `<svg viewBox="0 0 24 24" fill="none"><path d="M11 19l-7-7 1.5-1.5L11 16l7.5-7.5L20 10l-9 9z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+      title: 'Análise Profissional',
+      description: 'KPIs e painéis para acompanhar sua evolução.',
+      items: [
+        'Winrate por contexto',
+        'Erro recorrente e gatilhos',
+        'Hora/dia com melhor performance'
+      ]
     },
     {
-      q: 'Como funcionam os créditos de IA?',
-      a: 'Usuários Premium recebem 10 créditos por mês. Cada análise básica usa 1 crédito, análises avançadas usam 3. Você pode comprar créditos extras se precisar.',
-    },
-    {
-      q: 'Posso migrar do Basic para Premium?',
-      a: 'Claro! Você pode fazer upgrade a qualquer momento e seus dados serão mantidos. Você também ganha um desconto proporcional.',
-    },
-    {
-      q: 'Vocês oferecem suporte?',
-      a: 'Sim! Usuários Basic têm suporte por email. Premium e Pro têm suporte prioritário via chat ao vivo e resposta em até 20 horas em dias úteis.',
-    },
-  ];
-
-  five = new Array(5);
-
-  ngOnInit() {
-    // cookie bar
-    const consent = localStorage.getItem('tnx_cookie_consent');
-    if (!consent) this.showCookieBar = true;
-  }
-
-  @HostListener('window:scroll', [])
-  onScroll() {
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-    this.isScrolled = y > 20;
-    this.showScrollTop = y > 400;
-  }
-
-  setBilling(val: BillingCycle) {
-    this.billingCycle = val;
-  }
-
-  pricePremium(): number {
-    return this.billingCycle === 'yearly' ? 7.99 : 9.99;
-  }
-
-  subtitlePremium(): string | null {
-    return this.billingCycle === 'yearly' ? 'Economize €24/ano' : null;
-  }
-
-  handleCheckout(
-    planKey: 'premium_monthly' | 'premium_yearly' | 'pro_monthly'
-  ) {
-    const checkoutUrls: Record<string, string> = {
-      premium_monthly:
-        'https://tradingnotex.lemonsqueezy.com/checkout/buy/premium-monthly',
-      premium_yearly:
-        'https://tradingnotex.lemonsqueezy.com/checkout/buy/premium-yearly',
-      pro_monthly:
-        'https://tradingnotex.lemonsqueezy.com/checkout/buy/pro-monthly',
-    };
-    const url = checkoutUrls[planKey];
-    if (url) window.open(url, '_blank');
-  }
-
-  scrollToSection(id: string) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      this.mobileMenuOpen = false;
+      gradient: 'bg-gradient-to-r from-[#f59e0b] to-[#d97706]',
+      icon: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 6v12m-6-6h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+      title: 'Disciplina & Rotina',
+      description: 'Transforme insights em hábitos consistentes.',
+      items: [
+        'Checklist pré-mercado',
+        'Regras pessoais e limites',
+        'Trilhas gamificadas de evolução'
+      ]
     }
+  ];
+
+  // ✅ ADIÇÃO 2: quickFeatures para o grid rápido
+  quickFeatures = [
+    { emoji: '🧠', label: 'Psicologia do Trading' },
+    { emoji: '📈', label: 'Métricas em Tempo' },
+    { emoji: '📝', label: 'Jornal de Trades' },
+    { emoji: '🎯', label: 'Metas Semanais' },
+    { emoji: '🧩', label: 'Padrões Pessoais' },
+    { emoji: '⏱️', label: 'Rotinas Rápidas' },
+    { emoji: '🔒', label: 'Privacidade & SSL' },
+    { emoji: '🤝', label: 'Comunidade' }
+  ];
+
+  // --- MÉTODOS (mantenha os que você já tinha; seguem os essenciais) ---
+  ngOnInit(): void {
+    this.generateChartPoints();
+    this.startHeadlineCarousel();
+    this.startScreenCarousel();
+    this.animateStats();
+    this.calculateEvolution();
   }
 
-  go(path: string) {
-    window.location.href = path;
+  ngOnDestroy(): void {
+    if (this.headlineIntervalId) clearInterval(this.headlineIntervalId);
+    if (this.screenIntervalId) clearInterval(this.screenIntervalId);
+    if (this.statsAnimId) cancelAnimationFrame(this.statsAnimId);
   }
 
-  acceptCookies() {
-    localStorage.setItem('tnx_cookie_consent', 'true');
-    this.showCookieBar = false;
+  @HostListener('window:scroll') onScroll(): void {
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    this.isScrolled = y > 10;
+    this.showScrollTop = y > 300;
+    const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    this.scrollProgress = docHeight > 0 ? Math.min(100, Math.max(0, (y / docHeight) * 100)) : 0;
   }
 
-  scrollTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollToSection(id: string): void {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  scrollTop(): void { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+  setBilling(mode: BillingCycle): void { this.billingCycle = mode; }
+  pricePremium(): number { return this.billingCycle === 'monthly' ? 9 : 7; }
+
+  handleCheckout(plan: string): void { console.log('Checkout:', plan); }
+  openInteractiveDemo(): void { console.log('Open interactive demo'); }
+  go(path: string): void { window.location.href = path; }
+
+  setCurrentScreen(i: number): void { this.currentScreenIndex = i; }
+
+  private startHeadlineCarousel(): void {
+    this.headlineIntervalId = setInterval(() => {
+      this.currentHeadlineIndex = (this.currentHeadlineIndex + 1) % 3;
+    }, 4000);
+  }
+  private startScreenCarousel(): void {
+    this.screenIntervalId = setInterval(() => {
+      this.currentScreenIndex = (this.currentScreenIndex + 1) % this.appScreens.length;
+    }, 4500);
   }
 
-  toggleFaq(i: number) {
-    this.activeFaq = this.activeFaq === i ? null : i;
+  private generateChartPoints(): void {
+    const width = 1440, height = 800, steps = 120;
+    const pts: string[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = (i / steps) * width;
+      const base = Math.sin(i * 0.25) * 120 + Math.sin(i * 0.07) * 60;
+      const y = height / 2 - base - 20;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    this.chartPoints = pts.join(' ');
+  }
+
+  // private statsAnimId?: number;
+  private animateStats(): void {
+    const start = { trades: 0, discipline: 0, users: 0, rating: 0 };
+    const end = this.statsTargets;
+    const duration = 1200;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      this.animatedStats.trades = Math.round(start.trades + (end.trades - start.trades) * p);
+      this.animatedStats.discipline = Math.round(start.discipline + (end.discipline - start.discipline) * p);
+      this.animatedStats.users = Math.round(start.users + (end.users - start.users) * p);
+      const r = start.rating + (end.rating - start.rating) * p;
+      this.animatedStats.rating = Math.round(r * 10) / 10;
+      if (p < 1) this.statsAnimId = requestAnimationFrame(step);
+    };
+    this.statsAnimId = requestAnimationFrame(step);
+  }
+
+  calculateEvolution(): void {
+    const exp = this.evolutionTracker.experience;
+    const trackingWeights = { none: 0, sometimes: 0.4, basic: 0.7, detailed: 1 } as const;
+    const base = trackingWeights[this.evolutionTracker.currentTracking];
+    const ch = this.evolutionTracker.challenges;
+    const challengeBoost =
+      (ch.discipline ? 0.25 : 0) +
+      (ch.emotional ? 0.2 : 0) +
+      (ch.consistency ? 0.2 : 0) +
+      (ch.analysis ? 0.15 : 0);
+
+    const disc = Math.min(100, Math.round((base * 45 + challengeBoost * 35) - (exp > 24 ? 5 : 0)));
+    const emo  = Math.min(100, Math.round((base * 35 + (ch.emotional ? 20 : 10) + challengeBoost * 20)));
+    const patt = Math.min(100, Math.round((base * 40 + (ch.analysis ? 20 : 10) + challengeBoost * 15)));
+
+    this.evolutionTracker.improvements = {
+      discipline: Math.max(0, disc),
+      emotional: Math.max(0, emo),
+      patterns: Math.max(0, patt)
+    };
+
+    const baseMonths = 18;
+    const reduction = Math.min(10, Math.round(base * 8 + challengeBoost * 4 - (exp / 12)));
+    this.evolutionTracker.timeToProf = Math.max(3, baseMonths - reduction);
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (window.innerWidth >= 768 && this.mobileMenuOpen) this.mobileMenuOpen = false;
+  }
+
+  setCurrentHeadline(idx: number): void {
+    this.currentHeadlineIndex = idx % 3;
   }
 }
