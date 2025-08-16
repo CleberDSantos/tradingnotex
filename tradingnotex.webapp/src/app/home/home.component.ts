@@ -216,37 +216,39 @@ type BillingCycle = 'monthly' | 'yearly';
       </nav>
 
   <!-- HERO -->
-<section id="top" class="relative bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 min-h-[90vh] flex items-center justify-center">
+<!-- HERO -->
+<section id="top" class="relative bg-gradient-to-br from-[#0a0c10] to-[#0f131a] text-gray-100 min-h-[70vh] flex items-center justify-center">
   <div class="max-w-7xl mx-auto px-6 lg:px-12 text-center">
 
     <!-- Headline -->
     <h1 class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
-      90% dos traders <span class="text-[#ef4444]">perdem dinheiro</span>.<br />
-      Você não precisa ser um deles.
+      A maioria dos traders <span class="text-[#ef4444]">fracassa</span>.<br />
+      Mas você agora tem uma <span class="text-[#22d3ee]">poderosa ferramenta</span> para mudar isso.
     </h1>
 
     <!-- Subheadline -->
     <p class="text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto">
-      Falta de disciplina, emoções descontroladas e ausência de métricas claras
-      estão entre os maiores motivos. O <span class="text-[#22d3ee] font-semibold">TradingNoteX</span>
-      ajuda você a virar o jogo com <span class="text-[#22d3ee]">organização</span>,
-      <span class="text-[#f59e0b]">análise por IA</span> e
-      <span class="text-[#10b981]">gamificação</span>.
+      O <span class="text-[#22d3ee] font-bold">TradingNoteX</span> não é apenas um diário de trades.
+      É uma <span class="text-[#f59e0b] font-semibold">plataforma avançada</span> de
+      <span class="text-[#22d3ee]">análise</span>,
+      <span class="text-[#10b981]">organização</span> e
+      <span class="text-[#f59e0b]">planejamento</span>,
+      potencializada por <span class="text-[#22d3ee]">Inteligência Artificial</span> e gamificação para manter você motivado e disciplinado.
     </p>
 
     <!-- Estatísticas -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
       <div class="bg-[#0f131a]/70 backdrop-blur border border-[#1b2330] rounded-2xl p-6">
         <div class="text-3xl font-bold text-[#ef4444] mb-2">90%</div>
-        <p class="text-sm text-gray-400">dos traders perdem capital por falta de disciplina e gestão</p>
+        <p class="text-sm text-gray-400">dos traders não têm controle emocional nem plano definido</p>
       </div>
       <div class="bg-[#0f131a]/70 backdrop-blur border border-[#1b2330] rounded-2xl p-6">
-        <div class="text-3xl font-bold text-[#f59e0b] mb-2">70%</div>
-        <p class="text-sm text-gray-400">repetem os mesmos erros emocionais sem perceber</p>
+        <div class="text-3xl font-bold text-[#f59e0b] mb-2">80%</div>
+        <p class="text-sm text-gray-400">não registram suas operações e repetem os mesmos erros</p>
       </div>
       <div class="bg-[#0f131a]/70 backdrop-blur border border-[#1b2330] rounded-2xl p-6">
         <div class="text-3xl font-bold text-[#22d3ee] mb-2">+3x</div>
-        <p class="text-sm text-gray-400">chance de consistência com métricas e acompanhamento por IA</p>
+        <p class="text-sm text-gray-400">mais chances de consistência com métricas, IA e gamificação</p>
       </div>
     </div>
 
@@ -256,7 +258,7 @@ type BillingCycle = 'monthly' | 'yearly';
         (click)="handleCheckout('premium_monthly')"
         class="px-8 py-4 bg-gradient-to-r from-[#22d3ee] to-[#10b981] text-white font-semibold rounded-xl shadow-lg hover:scale-105 hover:shadow-[#22d3ee]/30 transition-all duration-300"
       >
-        Começar Agora
+        Experimente a ferramenta poderosa
       </button>
       <button
         (click)="scrollToSection('journey')"
@@ -270,8 +272,9 @@ type BillingCycle = 'monthly' | 'yearly';
 </section>
 
 
+
       <!-- 1) DORES & SOLUÇÕES + DEPOIMENTOS -->
-      <section class="py-20 px-4" id="pains">
+      <section class="py-10 px-4" id="pains">
         <div class="max-w-7xl mx-auto">
           <div class="text-center mb-12">
             <h2 class="text-3xl md:text-4xl font-bold mb-4">
